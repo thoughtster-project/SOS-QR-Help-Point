@@ -1,6 +1,6 @@
 const dscreen = document.getElementById('dscreen');
-const driverBus = new URLSearchParams(location.search).get('bus')?.trim() || 'B-104';
-document.getElementById('driverBusLabel').textContent = `รถ ${driverBus}`;
+const driverBus = new URLSearchParams(location.search).get('bus')?.trim() || null;
+document.getElementById('driverBusLabel').textContent = driverBus ? `รถ ${driverBus}` : 'ทุกคัน';
 
 const cases = new Map();
 const closedIds = new Set();
@@ -26,7 +26,7 @@ function showPanel(v){
 
 function mm(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
 function caseWho(item){
-  const place = [item.pointName,item.zone,item.seat && `ที่นั่ง ${item.seat}`].filter(Boolean).join(' · ');
+  const place = [!driverBus && item.bus && `รถ ${item.bus}`,item.pointName,item.zone,item.seat && `ที่นั่ง ${item.seat}`].filter(Boolean).join(' · ');
   return item.from === 'bystander' ? `แจ้งโดยผู้พบเห็นเหตุ · ${place}` : place || 'ไม่ระบุตำแหน่ง';
 }
 function pendingCases(){
@@ -70,7 +70,7 @@ function selectCase(id){
   document.getElementById('reqBanner').style.display = item.policeRequested ? 'flex' : 'none';
   document.getElementById('reqTime').textContent = item.policeRequested ? 'ผู้แจ้งขอให้ประสานตำรวจ' : '';
   document.getElementById('alertWho').textContent = caseWho(item);
-  document.getElementById('alertMeta').textContent = `รถ ${item.bus || driverBus} · รหัสเหตุการณ์ ${id}`;
+  document.getElementById('alertMeta').textContent = `รถ ${item.bus || driverBus || 'ไม่ระบุ'} · รหัสเหตุการณ์ ${id}`;
   document.getElementById('protoWho').textContent = caseWho(item);
   document.getElementById('protoCase').textContent = id;
   if(item.status==='acknowledged'){
@@ -93,7 +93,7 @@ function queueAfterClose(){
 }
 
 function addCase(item){
-  if(!item?.caseId || closedIds.has(item.caseId) || item.bus!==driverBus) return;
+  if(!item?.caseId || closedIds.has(item.caseId) || (driverBus && item.bus!==driverBus)) return;
   const existing=cases.get(item.caseId);
   const next={...existing,...item};
   if(existing?.status==='acknowledged' && item.status==='open'){
@@ -127,7 +127,8 @@ onMsg(msg=>{
 
 async function loadActiveCases(){
   try {
-    const response=await fetch('/api/active-incidents?bus='+encodeURIComponent(driverBus),{cache:'no-store'});
+    const query=driverBus ? '?bus='+encodeURIComponent(driverBus) : '';
+    const response=await fetch('/api/active-incidents'+query,{cache:'no-store'});
     if(!response.ok) throw new Error('Unable to load cases');
     const data=await response.json();
     for(const row of data.cases){

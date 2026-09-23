@@ -42,4 +42,24 @@ assert.equal(window.document.getElementById('queueList').children.length,1);
 vm.runInContext("selectCase('SOS-SECOND')",context);
 assert.equal(vm.runInContext('caseId',context),'SOS-SECOND');
 assert.equal(window.document.getElementById('queueTray').style.display,'none');
+receive({type:'sos',caseId:'SOS-OTHER-BUS',from:'passenger',bus:'A-055',zone:'A',ts:4});
+assert.equal(window.document.getElementById('queueCount').textContent,'⚠ รอดำเนินการ 1 เคส','the Hub driver must receive cases from other QR buses');
+
+const { window: scopedWindow } = parseHTML(html);
+let scopedReceive;
+Object.assign(scopedWindow, {
+  location: { search: '?bus=B-104' },
+  setInterval: () => 1, clearInterval: () => {}, setTimeout: () => 1,
+  onMsg: handler => { scopedReceive = handler; },
+  sendMsg: () => Promise.resolve({ delivered: true }),
+  nowThai: () => '12:00:00',
+  fetch: async () => ({ok:true,json:async()=>({cases:[]})}),
+  confirm: () => true, alert: () => {},
+});
+const scopedContext = vm.createContext(scopedWindow);
+vm.runInContext(fs.readFileSync(new URL('../driver.js', import.meta.url), 'utf8'), scopedContext);
+scopedReceive({type:'sos',caseId:'SOS-OTHER-BUS',from:'passenger',bus:'A-055',ts:4});
+assert.equal(vm.runInContext('caseId',scopedContext),null,'a bus-specific driver must ignore another bus');
+scopedReceive({type:'sos',caseId:'SOS-OWN-BUS',from:'passenger',bus:'B-104',ts:5});
+assert.equal(vm.runInContext('caseId',scopedContext),'SOS-OWN-BUS');
 console.log('Multiple SOS reports remain separate and queued after the first case closes.');

@@ -7,9 +7,9 @@ export default async (req: Request) => {
   if (req.method !== "GET") return new Response("Method not allowed", { status: 405 });
   try {
     const bus = new URL(req.url).searchParams.get("bus")?.trim().slice(0, 40);
-    if (!bus) return Response.json({ error: "Bus is required" }, { status: 400 });
+    const active = inArray(incidents.status, ["open", "acknowledged"]);
     const cases = await db.select().from(incidents)
-      .where(and(eq(incidents.bus, bus), inArray(incidents.status, ["open", "acknowledged"])))
+      .where(bus ? and(eq(incidents.bus, bus), active) : active)
       .orderBy(asc(incidents.reportedAt)).limit(200);
     return Response.json({ cases }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {

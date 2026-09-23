@@ -27,7 +27,8 @@
 <div class="phone">
   <!-- 2. SOS home (shared entry point for both victim + bystander) -->
   <div class="screen active" id="s-sos">
-    <div class="meta">รถ B-104 · โซน B · ที่นั่ง 14</div>
+    <div class="meta" id="pointMeta">รถ B-104 · โซน B · ที่นั่ง 14</div>
+    <div class="sub" id="pointLoadError" style="display:none;color:#b91c1c;text-align:center;margin:8px 0" role="alert"></div>
     <div class="pill">📍 พิกัดพร้อมส่ง (13.75630, 100.50180)</div>
     <div class="silent">
       <span>🔇</span>
@@ -57,7 +58,7 @@
       <div class="chip on" data-z="โซนกลาง">โซนกลาง</div>
       <div class="chip" data-z="โซนหลัง">โซนหลัง</div>
     </div>
-    <div class="pill">🚌 <b>รถ B-104</b> · โซน B</div>
+    <div class="pill" id="bystanderPointMeta">🚌 รถ B-104 · โซน B</div>
     <div class="pill">🕘 เวลาที่เกิดเหตุโดยประมาณ <b style="margin-left:auto" id="tNow"></b></div>
     <div class="pill">📍 ใช้พิกัด GPS ปัจจุบัน (13.75630, 100.50180)</div>
     <button class="btn btn-send" onclick="go('s-by-detail')">ถูกต้อง — แจ้งจุดนี้ ▸</button>
@@ -88,10 +89,8 @@
       <div class="ring"></div>
       <h2 style="margin-bottom:22px">กำลังส่งสัญญาณขอความช่วยเหลือ</h2>
       <div style="width:100%">
-        <div class="ch"><span>💬</span><span>LINE OA</span><span>✓</span></div>
-        <div class="ch"><span>📞</span><span>SMS</span><span>✓</span></div>
-        <div class="ch"><span>✉️</span><span>อีเมลศูนย์ควบคุม</span><span>✓</span></div>
-        <div class="ch"><span>🚌</span><span>หน้าจอคนขับ</span><span>✓</span></div>
+        <div class="ch"><span>📝</span><span>กำลังบันทึกคำขอ SOS</span><span>…</span></div>
+        <div class="ch"><span>🚌</span><span>กำลังอัปเดตหน้าจอคนขับ</span><span>…</span></div>
       </div>
       <p class="sub" style="margin-top:18px">🔒 ส่งผ่านช่องทางที่เข้ารหัส</p>
       <p class="sub" style="margin-top:4px;display:none" id="silentSendNote">🔇 ส่งแบบเงียบ — ไม่มีเสียงและการแจ้งเตือนบนเครื่อง</p>
@@ -103,7 +102,7 @@
     <div class="center">
       <div class="tick">✓</div>
       <h2>ส่งคำขอแล้ว</h2>
-      <p class="sub" style="margin-top:8px" id="sentSub">เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว<br>โปรดอยู่ในที่ปลอดภัย</p>
+      <p class="sub" style="margin-top:8px" id="sentSub">ระบบรับคำขอแล้ว<br>โปรดอยู่ในที่ปลอดภัย</p>
       <div class="code" id="codeDisp">SOS-000000</div>
       <p class="sub" style="margin-top:16px" id="sentWait">รอเจ้าหน้าที่ดำเนินการ…</p>
     </div>
@@ -283,6 +282,9 @@ Object.assign(translations.my, {
 translations.en['คนขับรับทราบแล้วเมื่อ']='Driver acknowledged at'; translations.en['เคส']='Case';
 translations.zh['คนขับรับทราบแล้วเมื่อ']='司机确认时间：'; translations.zh['เคส']='事件';
 translations.my['คนขับรับทราบแล้วเมื่อ']='ယာဉ်မောင်း အတည်ပြုချိန်'; translations.my['เคส']='ဖြစ်ရပ်';
+Object.assign(translations.en, {'กำลังบันทึกคำขอ SOS':'Saving SOS request','กำลังอัปเดตหน้าจอคนขับ':'Updating driver display','ระบบรับคำขอแล้ว':'Request received'});
+Object.assign(translations.zh, {'กำลังบันทึกคำขอ SOS':'正在保存 SOS 请求','กำลังอัปเดตหน้าจอคนขับ':'正在更新司机屏幕','ระบบรับคำขอแล้ว':'系统已收到请求'});
+Object.assign(translations.my, {'กำลังบันทึกคำขอ SOS':'SOS တောင်းဆိုချက်ကို သိမ်းဆည်းနေသည်','กำลังอัปเดตหน้าจอคนขับ':'ယာဉ်မောင်းမျက်နှာပြင်ကို အပ်ဒိတ်လုပ်နေသည်','ระบบรับคำขอแล้ว':'တောင်းဆိုချက်ကို လက်ခံရရှိပါပြီ'});
 const thaiText = new WeakMap();
 function translatedValue(value){
   const normalized = String(value).trim().replace(/\s+/g, ' ');
@@ -328,6 +330,36 @@ let caseId = null;
 let mode = 'victim';           // 'victim' | 'bystander'
 let zone = 'โซนกลาง';
 let tags = ['ผู้ก่อเหตุมีอาวุธ','ลวนลาม / คุกคาม'];
+let qrPoint = null;
+const pointId = new URLSearchParams(globalThis.location?.search || '').get('point');
+let pointReady = !pointId;
+
+async function loadQrPoint(){
+  if(!pointId) return;
+  pointReady = false;
+  document.getElementById('pointMeta').textContent = 'กำลังโหลดข้อมูลจุด QR…';
+  try {
+    const response = await fetch('/api/qr-points?id=' + encodeURIComponent(pointId), {cache:'no-store'});
+    if(!response.ok) throw new Error('QR จุดนี้ไม่มีอยู่หรือถูกปิดใช้งาน');
+    qrPoint = (await response.json()).point;
+    pointReady = true;
+    const place = [qrPoint.bus, qrPoint.name, qrPoint.zone, qrPoint.seat && `ที่นั่ง ${qrPoint.seat}`].filter(Boolean).join(' · ');
+    document.getElementById('pointMeta').textContent = place;
+    document.getElementById('bystanderPointMeta').textContent = '🚌 ' + place;
+    zone = qrPoint.zone;
+    const chips = document.getElementById('zoneChips');
+    chips.querySelectorAll('.chip').forEach(chip=>chip.classList.toggle('on',chip.dataset.z===zone));
+    if(!chips.querySelector('.chip.on')){
+      const chip=document.createElement('div'); chip.className='chip on'; chip.dataset.z=zone; chip.textContent=zone; chips.prepend(chip);
+      chip.addEventListener('click',()=>{chips.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));chip.classList.add('on');zone=chip.dataset.z;});
+    }
+  } catch(error){
+    document.getElementById('pointMeta').textContent = 'ไม่สามารถใช้ QR จุดนี้ได้';
+    const box = document.getElementById('pointLoadError');
+    box.textContent = error.message + ' กรุณาแจ้งเจ้าหน้าที่หรือสแกน QR อื่น';
+    box.style.display = 'block';
+  }
+}
 
 function updateCurrentTime(){
   const locale = ({th:'th-TH', en:'en-GB', zh:'zh-CN', my:'my-MM'})[currentLang];
@@ -343,6 +375,7 @@ function go(id){
 
 /* ---- switch this same tab into the bystander (report-for-someone-else) flow ---- */
 function enterBystanderFlow(){
+  if(!pointReady){ alert('กรุณารอข้อมูลจุด QR หรือสแกน QR ที่ใช้งานได้'); return; }
   mode = 'bystander';
   document.getElementById('roleTag').textContent = '🧍 หน้าจอผู้พบเห็นเหตุการณ์ (Bystander)';
   document.getElementById('roleTag').className = 'tag bystander';
@@ -364,6 +397,7 @@ document.querySelectorAll('#tagChips .chip').forEach(c=>c.addEventListener('clic
 const sosBtn = document.getElementById('sosBtn');
 let pressTimer = null;
 function startPress(){
+  if(!pointReady) return;
   sosBtn.classList.add('pressing');
   pressTimer = setTimeout(sendSOS, 1000);
 }
@@ -376,27 +410,49 @@ sosBtn.addEventListener('touchstart', (e)=>{e.preventDefault();startPress();});
 ['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>sosBtn.addEventListener(ev, cancelPress));
 
 /* ---- shared send: builds the right payload for whichever mode is active ---- */
-function sendSOS(){
+let sendingSOS = false;
+async function sendSOS(){
   cancelPress();
+  if(!pointReady){ alert('จุด QR นี้ยังไม่พร้อมใช้งาน'); return; }
+  if(sendingSOS) return;
+  sendingSOS = true;
+  const previousScreen = mode === 'victim' ? 's-sos' : 's-by-detail';
+  go('s-sending');
+  if(pointId){
+    try {
+      const response = await fetch('/api/qr-points?id=' + encodeURIComponent(pointId), {cache:'no-store'});
+      if(!response.ok) throw new Error('QR จุดนี้ถูกปิดใช้งานหรือโหลดข้อมูลไม่ได้');
+      qrPoint = (await response.json()).point;
+    } catch(error){
+      sendingSOS = false; go(previousScreen); alert(error.message); return;
+    }
+  }
   caseId = genCaseId();
-  startPresence();
+  let delivery;
 
   if(mode === 'victim'){
-    sendMsg({type:'sos', from:'passenger', caseId, zone:'B', seat:14, bus:'B-104', time: nowThai()});
+    delivery = sendMsg({type:'sos', from:'passenger', caseId, pointId:qrPoint?.id || null, pointName:qrPoint?.name || null, zone:qrPoint?.zone || 'B', seat:qrPoint?.seat || '14', bus:qrPoint?.bus || 'B-104', time: nowThai()});
     document.getElementById('silentSendNote').style.display = 'none';
-    document.getElementById('sentSub').innerHTML = 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว<br>โปรดอยู่ในที่ปลอดภัย';
+    document.getElementById('sentSub').innerHTML = 'ระบบรับคำขอแล้ว<br>โปรดอยู่ในที่ปลอดภัย';
     document.getElementById('sentPrivacy').style.display = 'none';
   } else {
     const details = document.getElementById('incidentDetails').value.trim();
-    sendMsg({type:'sos', from:'bystander', caseId, zone, bus:'B-104', tags, details, time: nowThai()});
+    delivery = sendMsg({type:'sos', from:'bystander', caseId, pointId:qrPoint?.id || null, pointName:qrPoint?.name || null, zone, bus:qrPoint?.bus || 'B-104', tags, details, time: nowThai()});
     document.getElementById('silentSendNote').style.display = 'block';
-    document.getElementById('sentSub').innerHTML = 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว<br>ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น';
+    document.getElementById('sentSub').innerHTML = 'ระบบรับคำขอแล้ว<br>ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น';
     document.getElementById('sentPrivacy').style.display = 'flex';
   }
 
   renderLanguage();
 
-  go('s-sending');
+  const result = await delivery;
+  if(!result.delivered){
+    caseId = null; sendingSOS = false; go(previousScreen);
+    alert('ส่งคำขอไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองอีกครั้ง');
+    return;
+  }
+  startPresence();
+  sendingSOS = false;
   setTimeout(()=>{
     document.getElementById('codeDisp').textContent = caseId;
     go('s-sent');
@@ -410,7 +466,7 @@ function sendSOS(){
       }, 1600);
     }
     // bystander stays on "ส่งคำขอแล้ว" and waits for case_closed
-  }, 1800);
+  }, 350);
 }
 
 function requestPolice(){
@@ -483,6 +539,7 @@ window.addEventListener('pagehide', announceClosed);
 if(new URLSearchParams(location.search).get('start') === 'bystander'){
   enterBystanderFlow();
 }
+loadQrPoint();
 if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
 </script>
 </body>

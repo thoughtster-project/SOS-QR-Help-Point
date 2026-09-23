@@ -20,7 +20,7 @@ const pageLoadTs = Date.now();
 const handlers = [];
 
 function genCaseId(){
-  return 'SOS-' + Math.floor(100000 + Math.random() * 900000);
+  return 'SOS-' + crypto.randomUUID().slice(0, 12).toUpperCase();
 }
 
 function nowThai(){
@@ -33,27 +33,33 @@ function hasFirebase(){
 
 function sendMsg(msg){
   const full = {...msg, ts: Date.now()};
+  const deliveries = [];
 
   channel.postMessage(full);
   logLocally(full, true);
 
   if (hasFirebase()){
-    fetch(FIREBASE_URL.replace(/\/$/, '') + '/saferide/events.json', {
+    deliveries.push(fetch(FIREBASE_URL.replace(/\/$/, '') + '/saferide/events.json', {
       method: 'POST',
       body: JSON.stringify(full)
-    }).catch(err => console.warn('[SafeBus] ส่งข้อมูลข้ามอุปกรณ์ไม่สำเร็จ:', err));
+    }).then(response=>{if(!response.ok) throw new Error('Firebase '+response.status);})
+      .catch(err=>{console.warn('[SafeBus] ส่งข้อมูลข้ามอุปกรณ์ไม่สำเร็จ:',err);throw err;}));
   }
 
   if (full.type !== 'reporter_presence'){
-    fetch('/api/log-event', {
+    deliveries.push(fetch('/api/log-event', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify(full),
       keepalive: true
-    }).catch(err => console.warn('[SafeBus] บันทึก log ไม่สำเร็จ:', err));
+    }).then(response=>{if(!response.ok) throw new Error('Log '+response.status);})
+      .catch(err=>{console.warn('[SafeBus] บันทึก log ไม่สำเร็จ:',err);throw err;}));
   }
 
-  return full;
+  return Promise.allSettled(deliveries).then(results=>({
+    message:full,
+    delivered:results.some(result=>result.status==='fulfilled')
+  }));
 }
 
 function onMsg(handler){

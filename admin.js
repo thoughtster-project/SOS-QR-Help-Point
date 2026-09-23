@@ -4,7 +4,7 @@ const eventLabels = {
   sos:'รับแจ้งเหตุ SOS', police_request:'ผู้โดยสารขอให้แจ้งตำรวจ', driver_ack:'คนขับรับทราบเหตุ',
   driver_resolved_self:'คนขับเลือกระงับเหตุเอง', driver_police_started:'คนขับเริ่มติดต่อตำรวจ',
   driver_calling_done:'คนขับแจ้งตำรวจเรียบร้อย', unit_arriving:'ยืนยันหน่วยกำลังเข้าพื้นที่',
-  case_closed:'ปิดเคส', reporter_closed:'ผู้แจ้งปิดหรือออกจากหน้าจอ'
+  case_closed:'ปิดเคส', reporter_closed:'ผู้แจ้งปิดหรือออกจากหน้าจอ (เคสยังเปิดอยู่)'
 };
 const statusLabels = {open:'กำลังดำเนินการ',acknowledged:'รับทราบแล้ว',closed:'ปิดเคส',abandoned:'ผู้แจ้งออกจากหน้า'};
 const reporterLabels = {passenger:'ผู้โดยสาร',bystander:'ผู้แจ้งแทน',unknown:'ไม่ระบุ'};
@@ -39,8 +39,10 @@ async function loadData(silent=false){
 
 function responseText(row){
   if(row.resolution==='resolved_by_driver') return 'คนขับระงับเหตุเอง';
+  if(row.resolution==='resolved_with_prior') return 'ระงับเหตุพร้อมเคสก่อนหน้า';
   if(row.policeCalled) return row.policeRequested ? 'แจ้งตำรวจตามคำร้องขอ' : 'แจ้งตำรวจ';
   if(row.policeRequested) return 'รอแจ้งตำรวจ';
+  if(row.status==='closed' && row.resolution) return row.resolution;
   return 'ยังไม่ระบุ';
 }
 
@@ -58,7 +60,7 @@ function renderCases(){
 
 function showDetail(row){
   state.selected=row.caseId; $('detailPanel').hidden=false; $('detailCase').textContent=row.caseId;
-  $('caseFacts').innerHTML=[['ผู้แจ้ง',reporterLabels[row.reporterType]],['รถ',row.bus||'—'],['ตำแหน่ง',row.zone||'—'],['สถานะ',statusLabels[row.status]],['การตอบสนอง',responseText(row)]]
+  $('caseFacts').innerHTML=[['ผู้แจ้ง',reporterLabels[row.reporterType]],['รถ',row.bus||'—'],['จุด QR',row.pointName||'—'],['ตำแหน่ง',[row.zone,row.seat&&`ที่นั่ง ${row.seat}`].filter(Boolean).join(' · ')||'—'],['สถานะ',statusLabels[row.status]],['การตอบสนอง',responseText(row)]]
     .map(([label,value])=>`<span class="fact">${esc(label)} <b>${esc(value)}</b></span>`).join('');
   $('detailMessage').textContent=row.details||'ไม่มีข้อความอธิบายเพิ่มเติม';
   $('detailMessage').classList.toggle('empty-message',!row.details);

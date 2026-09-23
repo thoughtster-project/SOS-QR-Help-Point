@@ -1,11 +1,13 @@
-import { boolean, integer, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { boolean, jsonb, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
 export const incidents = pgTable("incidents", {
   caseId: text("case_id").primaryKey(),
   reporterType: text("reporter_type").notNull().default("unknown"),
   bus: text("bus"),
+  pointId: text("point_id"),
+  pointName: text("point_name"),
   zone: text("zone"),
-  seat: integer("seat"),
+  seat: text("seat"),
   details: text("details").notNull().default(""),
   tags: jsonb("tags").$type<string[]>().notNull().default([]),
   status: text("status").notNull().default("open"),
@@ -27,3 +29,13 @@ export const incidentEvents = pgTable("incident_events", {
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const qrPoints = pgTable("qr_points", {
+  id: text("id").primaryKey(),
+  bus: text("bus").notNull(),
+  name: text("name").notNull(),
+  zone: text("zone").notNull(),
+  seat: text("seat"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});

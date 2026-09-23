@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>จัดการจุด QR — SafeBus SOS</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="common.css">
+  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="qr-points.css">
+</head>
+<body class="qr-app">
+  <header class="admin-head">
+    <a class="brand" href="index.html" aria-label="กลับหน้า Simulation Hub">
+      <img class="brand-mark" src="safebus-logo.png" alt="SafeBus"><span><b>SafeBus SOS</b><small>QR MANAGEMENT</small></span>
+    </a>
+    <div class="qr-head-links"><a class="hub-link" href="admin.html">บันทึกเหตุการณ์</a><a class="hub-link" href="index.html">← Simulation Hub</a></div>
+  </header>
+  <main class="admin-shell qr-shell">
+    <section class="intro qr-intro"><div><p class="eyebrow">QR OPERATIONS</p><h1>จัดการจุดติด QR Code</h1><p>แก้ไขชื่อจุด รถ โซน และที่นั่งได้ โดย QR Code เดิมยังใช้งานต่อ</p></div></section>
+
+    <section class="create-section">
+      <div class="count-card"><span>จุด QR ทั้งหมด</span><strong id="totalPoints">—</strong><small id="activeCount">กำลังโหลด...</small></div>
+      <form id="pointForm" class="form-card">
+        <div class="form-title"><span id="formIcon">＋</span><div><strong id="formHeading">สร้างจุดใหม่</strong><small>ระบุข้อมูลที่จะปรากฏบนหน้าผู้แจ้งเหตุ</small></div><label class="key-field">รหัสผู้ดูแล<input id="adminKey" type="password" autocomplete="off" placeholder="กรอกรหัสเพื่อบันทึก"></label></div>
+        <div class="fields">
+          <label>รถ / สถานที่<input id="bus" maxlength="40" required placeholder="เช่น B-104"></label>
+          <label>ชื่อจุด<input id="name" maxlength="100" required placeholder="เช่น ประตูหน้า"></label>
+          <label>โซน<input id="zone" maxlength="80" required placeholder="เช่น โซน A"></label>
+          <label>ที่นั่ง <small>(ถ้ามี)</small><input id="seat" maxlength="40" placeholder="เช่น 14 หรือ 14A"></label>
+          <button id="saveBtn" type="submit">＋ สร้างจุด</button>
+          <button id="cancelBtn" type="button" hidden>ยกเลิก</button>
+        </div>
+        <p id="formMessage" role="status"></p>
+      </form>
+    </section>
+
+    <section class="points-section"><div class="section-title"><div><p>QR POINTS</p><h2>รายการจุดทั้งหมด</h2></div><span id="listCount">— จุด</span></div>
+      <div id="errorBox" class="error" hidden>โหลดข้อมูลจุดไม่สำเร็จ กรุณาลองใหม่อีกครั้ง <button id="retryBtn">ลองใหม่</button></div>
+      <div id="pointList" class="grid"></div>
+      <p id="emptyState" class="empty" hidden>ยังไม่มีจุด QR — สร้างจุดแรกจากแบบฟอร์มด้านบน</p>
+    </section>
+  </main>
+  <script src="vendor/qrcode.min.js"></script>
+  <script src="qr-points.js"></script>
+</body>
+</html>

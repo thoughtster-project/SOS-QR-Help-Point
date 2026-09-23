@@ -9,6 +9,7 @@ let countdownTk = null, elapsedTk = null, callTk = null;
 let currentPanel = 'v1';
 let awaitingChoice = false;
 let lastClosedId = null;
+let pendingBatchClose = null;
 
 setInterval(()=>{
   document.querySelectorAll('.clk').forEach(e=>e.textContent =
@@ -37,15 +38,17 @@ function pendingCases(){
 function renderQueue(){
   const pending = pendingCases();
   const tray = document.getElementById('queueTray');
-  tray.style.display = pending.length ? 'block' : 'none';
+  tray.style.display = pending.length && currentPanel !== 'v7' ? 'flex' : 'none';
   document.getElementById('queueCount').textContent = `⚠ รอดำเนินการ ${pending.length} เคส`;
   const items = document.getElementById('queueItems'); items.replaceChildren();
-  for(const item of pending.slice(0,4)){
+  const trayWidth = tray.getBoundingClientRect?.().width || window.innerWidth || 900;
+  const visibleLimit = trayWidth < 500 ? 1 : trayWidth < 760 ? 2 : 3;
+  for(const item of pending.slice(0,visibleLimit)){
     const chip=document.createElement('span'); chip.className='queue-item';
-    chip.textContent=`${item.caseId} · ${caseWho(item)}`; items.append(chip);
+    chip.textContent=item.caseId; chip.title=caseWho(item); items.append(chip);
   }
-  if(pending.length>4){
-    const more=document.createElement('span'); more.className='queue-item'; more.textContent=`+${pending.length-4} เคส`; items.append(more);
+  if(pending.length>visibleLimit){
+    const more=document.createElement('span'); more.className='queue-item'; more.textContent=`+${pending.length-visibleLimit}`; items.append(more);
   }
   if(currentPanel !== 'v7') return;
   const list=document.getElementById('queueList');
@@ -180,13 +183,30 @@ function finish(reason='police_contacted'){
 }
 function closeSelectedCases(){
   const selected=[...document.querySelectorAll('#queueList input')].filter(input=>input.checked).map(input=>input.value);
-  if(!selected.length){alert('เลือกอย่างน้อย 1 เคสที่ระงับเหตุแล้ว');return;}
+  const feedback=document.getElementById('queueFeedback');
+  feedback.style.display='none';
+  if(!selected.length){feedback.textContent='เลือกอย่างน้อย 1 เคสที่ระงับเหตุแล้ว';feedback.style.display='block';return;}
   let reason=document.getElementById('batchReason').value || 'resolved_with_prior';
   if(reason==='other'){
     reason=document.getElementById('otherReason').value.trim();
-    if(!reason){alert('กรุณาระบุเหตุผล');return;}
+    if(!reason){feedback.textContent='กรุณาระบุเหตุผลก่อนปิดเคส';feedback.style.display='block';return;}
   }
-  if(!confirm(`ยืนยันปิด ${selected.length} เคสที่เลือก?`)) return;
+  pendingBatchClose={selected,reason};
+  document.getElementById('closeDialogTitle').textContent=`ยืนยันปิด ${selected.length} เคส`;
+  const reasonLabel=reason==='resolved_with_prior'?'ระงับเหตุพร้อมกับเคสก่อนหน้า':reason;
+  const summary=selected.slice(0,3).join(', ') + (selected.length>3?` และอีก ${selected.length-3} เคส`:'');
+  document.getElementById('closeDialogMessage').textContent=`${summary} · เหตุผล: ${reasonLabel}`;
+  document.getElementById('closeDialog').style.display='flex';
+  document.getElementById('cancelClose').focus();
+}
+function dismissCloseDialog(){
+  pendingBatchClose=null;
+  document.getElementById('closeDialog').style.display='none';
+}
+function confirmCloseSelectedCases(){
+  if(!pendingBatchClose) return;
+  const {selected,reason}=pendingBatchClose;
+  dismissCloseDialog();
   for(const id of selected){
     if(!cases.has(id)) continue;
     sendMsg({type:'case_closed',from:'driver',caseId:id,reason,linkedCaseId:lastClosedId});
@@ -194,10 +214,17 @@ function closeSelectedCases(){
   }
   queueAfterClose();
 }
+document.getElementById('cancelClose').addEventListener('click',dismissCloseDialog);
+document.getElementById('confirmClose').addEventListener('click',confirmCloseSelectedCases);
+document.getElementById('queueList').addEventListener('change',()=>document.getElementById('queueFeedback').style.display='none');
+document.getElementById('otherReason').addEventListener('input',()=>document.getElementById('queueFeedback').style.display='none');
+window.addEventListener('keydown',event=>{if(event.key==='Escape') dismissCloseDialog();});
 document.getElementById('batchReason').addEventListener('change',event=>{
   document.getElementById('otherReason').style.display=event.target.value==='other'?'block':'none';
+  document.getElementById('queueFeedback').style.display='none';
 });
 showPanel('v1');
 loadActiveCases();
 setInterval(loadActiveCases,3000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden) loadActiveCases();});
+window.addEventListener('resize',renderQueue);

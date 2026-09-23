@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>หน้าจอคนขับ — SafeBus Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .monitor{width:100%;max-width:640px;background:#12161C;border-radius:22px;padding:13px;
+    box-shadow:0 20px 46px rgba(0,0,0,.32)}
+  .dscreen{min-height:400px;border-radius:13px;overflow:hidden;position:relative;
+    background:#F5F6F8;transition:background .4s;display:flex;flex-direction:column}
+  .dscreen.alert{background:var(--red)}
+  .dscreen.amberbg{background:#FDF3DC}
+  .dscreen.bluebg{background:var(--bluebg)}
+  .dscreen.greenbg{background:#E4F2EA}
+  .dtop{display:flex;justify-content:space-between;padding:14px 18px;font-size:13px;font-weight:700;color:#2C3440}
+  .dbody{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+         text-align:center;gap:10px;padding:18px 26px}
+  .idle-dot{width:14px;height:14px;border-radius:50%;background:#16A34A;box-shadow:0 0 0 0 rgba(22,163,74,.45);
+             animation:brt 2.2s ease-out infinite}
+  @keyframes brt{70%{box-shadow:0 0 0 12px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+  .d-h1{font-size:19px;font-weight:700}
+  .d-h2{font-size:24px;font-weight:700;color:#fff}
+  .d-sub{font-size:13px;color:#5F6875;font-weight:500}
+  .dscreen.alert .d-sub{color:#fff;opacity:.92}
+  .cdbox{display:flex;align-items:center;gap:10px;background:rgba(0,0,0,.19);border-radius:12px;
+         padding:10px 18px}
+  .cdbox .num{font-size:24px;font-weight:700;color:#fff}
+  .cdbox .lb{font-size:11px;color:rgba(255,255,255,.86);text-align:left;line-height:1.35}
+  .pillx{display:inline-flex;align-items:center;gap:6px;border-radius:99px;padding:7px 16px;
+         font-size:12.5px;font-weight:700}
+  .pillx.red{background:rgba(255,255,255,.2);color:#fff}
+  .pillx.amber{background:#FBE9BE;color:#8A5B00}
+  .pillx.blue{background:#D9E6FC;color:#154AA8}
+  .protogrid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;width:100%;margin:8px 0}
+  .idlecard{background:#fff;border-radius:14px;padding:20px;margin-top:16px;width:100%;max-width:640px;
+            box-shadow:0 2px 10px rgba(0,0,0,.05)}
+  .dbody.v3{padding:14px 26px 20px;gap:7px}
+  .dbody .row{flex-wrap:wrap}
+  .dbody .row .btn{flex:1;min-width:140px}
+</style>
+</head>
+<body>
+
+<div class="topbar" style="max-width:640px">
+  <span class="tag driver">🚌 หน้าจอคนขับ (Driver)</span>
+  <a href="index.html">← กลับหน้าควบคุม</a>
+</div>
+
+<div class="monitor">
+  <div class="dscreen" id="dscreen">
+    <div class="dtop"><span>รถ B-104 · สาย 25</span><span class="clk"></span></div>
+
+    <!-- v1 idle -->
+    <div class="dbody v1">
+      <div class="idle-dot"></div>
+      <div class="d-h1">ระบบ SOS พร้อมทำงาน</div>
+      <div class="d-sub">ไม่มีเหตุการณ์ผิดปกติ — รอสัญญาณจากผู้โดยสารหรือผู้พบเห็นเหตุการณ์</div>
+    </div>
+
+    <!-- v2 alert -->
+    <div class="dbody v2" style="display:none">
+      <span class="pillx red">⚠ แจ้งเหตุฉุกเฉิน SOS</span>
+      <div class="d-h2" id="alertWho">โซน B · ที่นั่ง 14</div>
+      <div class="d-sub" id="alertMeta" style="color:#fff">รถ B-104 · รหัสเหตุการณ์ SOS-000000</div>
+      <div class="cdbox"><span class="num" id="cd">00:20</span>
+        <span class="lb">ก่อน auto-escalate<br>ไปศูนย์ควบคุม</span></div>
+      <button class="btn" style="width:auto;padding:12px 26px;background:#fff;color:var(--red);font-weight:700;border:none" onclick="ack()">รับทราบ + เข้าดำเนินการ</button>
+    </div>
+
+    <!-- v3 protocol -->
+    <div class="dbody v3" style="display:none">
+      <span class="pillx amber">🕐 กำลังเข้าช่วยเหลือ</span>
+      <div class="d-h1" id="protoWho">โซน B · ที่นั่ง 14</div>
+      <div class="d-sub">รหัสเหตุการณ์ <span id="protoCase"></span> · เข้าดำเนินการมาแล้ว <b id="el">00:00</b></div>
+
+      <div class="reqbanner" id="reqBanner" style="display:none">
+        <div class="bell">🔔</div>
+        <div>
+          <div class="t">ผู้โดยสารร้องขอให้แจ้งตำรวจ</div>
+          <div class="s" id="reqTime"></div>
+        </div>
+      </div>
+
+      <div class="protogrid2">
+        <div class="protoitem"><span class="num">1</span><span class="tx">แจ้ง จ.สาย หรือ 191</span></div>
+        <div class="protoitem"><span class="num">2</span><span class="tx">จัดหาพื้นที่ปลอดภัย</span></div>
+        <div class="protoitem"><span class="num">3</span><span class="tx">รักษาพยานหลักฐาน</span></div>
+        <div class="protoitem"><span class="num">4</span><span class="tx">บันทึกสิ่งที่ผู้โดยสารพูด</span></div>
+        <div class="protoitem"><span class="num">5</span><span class="tx">อย่ารบกวนหลักฐาน</span></div>
+        <div class="protoitem"><span class="num">6</span><span class="tx">ปกปิดตัวตนผู้เสียหาย</span></div>
+      </div>
+      <div style="font-size:13px;font-weight:700;color:#3A4351">ท่านสามารถระงับเหตุเองได้หรือไม่?</div>
+      <div class="row" style="width:100%">
+        <button class="btn" style="background:#fff;border:1.5px solid #DDE1E7" onclick="resolveSelf()">ระงับเหตุเอง</button>
+        <button class="btn" style="background:var(--red);color:#fff;border:none" onclick="callPolice()">📞 แจ้งตำรวจ</button>
+      </div>
+    </div>
+
+    <!-- v4 calling -->
+    <div class="dbody v4" style="display:none">
+      <span class="pillx blue">🚓 สน.ประจำเส้นทาง · ค่าตั้งต้นระบบ</span>
+      <div class="callring">📞</div>
+      <div class="station">สน.ห้วยขวาง</div>
+      <div class="tel">0 2277 xxxx</div>
+      <div class="calltime" id="ct">00:00</div>
+      <div class="d-sub">กำลังสนทนา · แจ้งรายละเอียดเหตุและจุดนัดพบทางสาย</div>
+      <button class="btn btn-dark" style="width:auto;padding:12px 24px" onclick="doneCalling()">แจ้งตำรวจเรียบร้อย · วางสาย</button>
+    </div>
+
+    <!-- v5 unit arriving -->
+    <div class="dbody v5" style="display:none">
+      <span class="pillx amber">🚓 ตำรวจกำลังเดินทางมา</span>
+      <div class="d-h1">สน.ห้วยขวาง · ชุด ป.07</div>
+      <div class="etabox">🕐 ถึงในอีก 4 นาที · จุดนัดพบ: ป้ายถัดไป</div>
+      <div class="confirm">✔ ยืนยันหน่วยลงพื้นที่ผ่านการคุยโทรศัพท์แล้ว</div>
+      <button class="btn btn-dark" style="width:auto;padding:12px 24px;margin-top:8px" onclick="finish()">สิ้นสุด</button>
+    </div>
+
+    <!-- v6 closed -->
+    <div class="dbody v6" style="display:none">
+      <div class="tick">✓</div>
+      <div class="d-h1">ปิดเคสเรียบร้อย</div>
+      <div class="d-sub">บันทึกข้อมูลและแจ้งผู้ใช้อัตโนมัติแล้ว</div>
+      <div class="d-sub">กำลังกลับสู่หน้าจอปกติ…</div>
+    </div>
+  </div>
+</div>
+
+<div class="idlecard" id="wireCard">
+  <div class="label" style="margin-bottom:10px">📡 บันทึกการสื่อสารระหว่างหน้าจอ (real-time)</div>
+  <div id="wire-log" style="max-height:180px"></div>
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const dscreen = document.getElementById('dscreen');
+let caseId = null, caseSource = null, countdownTk = null, elapsedTk = null, callTk = null;
+let presenceWatchTk = null, lastReporterPresence = 0;
+
+setInterval(()=>{
+  document.querySelectorAll('.clk').forEach(e=>e.textContent =
+    new Date().toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}));
+}, 1000);
+
+function showPanel(v){
+  ['v1','v2','v3','v4','v5','v6'].forEach(k=>{
+    document.querySelector('.'+k).style.display = (k===v ? 'flex' : 'none');
+  });
+  dscreen.className = 'dscreen' + (v==='v2' ? ' alert' : v==='v3'||v==='v5' ? ' amberbg' : v==='v4' ? ' bluebg' : v==='v6' ? ' greenbg' : '');
+}
+
+function mm(s){ return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+
+function resetDriver(){
+  clearInterval(countdownTk); clearInterval(elapsedTk); clearInterval(callTk); clearInterval(presenceWatchTk);
+  caseId = null; caseSource = null; lastReporterPresence = 0;
+  showPanel('v1');
+}
+
+function watchReporter(){
+  clearInterval(presenceWatchTk);
+  presenceWatchTk = setInterval(()=>{
+    if(caseId && lastReporterPresence && Date.now() - lastReporterPresence > 7000) resetDriver();
+  }, 1000);
+}
+
+onMsg((msg)=>{
+  if(msg.type === 'sos' && !caseId){
+    caseId = msg.caseId;
+    caseSource = msg.from;
+    lastReporterPresence = Date.now();
+    watchReporter();
+
+    // reset any leftover UI state from a previous (now-closed) case
+    document.getElementById('reqBanner').style.display = 'none';
+    document.getElementById('reqTime').textContent = '';
+
+    const who = msg.from === 'bystander'
+      ? `แจ้งโดยผู้พบเห็นเหตุ · ${msg.zone || ''}`
+      : `โซน ${msg.zone} · ที่นั่ง ${msg.seat}`;
+    document.getElementById('alertWho').textContent = who;
+    document.getElementById('alertMeta').textContent = `รถ ${msg.bus || 'B-104'} · รหัสเหตุการณ์ ${caseId}`;
+    document.getElementById('protoWho').textContent = who;
+    document.getElementById('protoCase').textContent = caseId;
+
+    showPanel('v2');
+    let t = 20;
+    document.getElementById('cd').textContent = mm(t);
+    clearInterval(countdownTk);
+    countdownTk = setInterval(()=>{
+      t = t>0 ? t-1 : 0;
+      document.getElementById('cd').textContent = mm(t);
+    }, 1000);
+  }
+
+  if(msg.type === 'reporter_presence' && msg.caseId === caseId){
+    lastReporterPresence = Date.now();
+  }
+
+  if(msg.type === 'reporter_closed' && msg.caseId === caseId){
+    resetDriver();
+  }
+
+  if(msg.type === 'police_request' && msg.caseId === caseId){
+    document.getElementById('reqBanner').style.display = 'flex';
+    document.getElementById('reqTime').textContent = 'กดขอความช่วยเหลือเพิ่มเติมเมื่อ ' + nowThai();
+  }
+});
+
+function ack(){
+  if(!caseId) return;
+  clearInterval(countdownTk);
+  sendMsg({type:'driver_ack', from:'driver', caseId});
+  showPanel('v3');
+  let e = 0;
+  document.getElementById('el').textContent = mm(e);
+  clearInterval(elapsedTk);
+  elapsedTk = setInterval(()=>{ document.getElementById('el').textContent = mm(++e); }, 1000);
+}
+
+function resolveSelf(){
+  clearInterval(elapsedTk);
+  sendMsg({type:'driver_resolved_self', from:'driver', caseId});
+  finish();
+}
+
+function callPolice(){
+  clearInterval(elapsedTk);
+  sendMsg({type:'driver_police_started', from:'driver', caseId});
+  showPanel('v4');
+  let c = 0;
+  document.getElementById('ct').textContent = mm(c);
+  clearInterval(callTk);
+  callTk = setInterval(()=>{ document.getElementById('ct').textContent = mm(++c); }, 1000);
+}
+
+function doneCalling(){
+  clearInterval(callTk);
+  sendMsg({type:'driver_calling_done', from:'driver', caseId});
+  showPanel('v5');
+}
+
+function finish(){
+  sendMsg({type:'unit_arriving', from:'driver', caseId});
+  sendMsg({type:'case_closed', from:'driver', caseId});
+  showPanel('v6');
+  setTimeout(()=>{
+    resetDriver();
+  }, 3000);
+}
+
+showPanel('v1');
+</script>
+</body>
+</html>

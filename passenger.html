@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>ผู้โดยสาร — SafeBus Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Myanmar:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<link rel="manifest" href="manifest.webmanifest">
+</head>
+<body class="passenger-app">
+
+<div class="topbar">
+  <span class="tag passenger" id="roleTag">🔴 หน้าจอผู้โดยสาร (Victim)</span>
+  <div class="language-switcher" role="group" aria-label="Language">
+    <button type="button" data-lang="th" class="active">TH</button>
+    <button type="button" data-lang="en">EN</button>
+    <button type="button" data-lang="zh">中文</button>
+    <button type="button" data-lang="my">မြန်</button>
+  </div>
+  <a href="index.html" id="backLink">← กลับหน้าควบคุม</a>
+</div>
+
+<div class="phone">
+  <!-- 2. SOS home (shared entry point for both victim + bystander) -->
+  <div class="screen active" id="s-sos">
+    <div class="meta">รถ B-104 · โซน B · ที่นั่ง 14</div>
+    <div class="pill">📍 พิกัดพร้อมส่ง (13.75630, 100.50180)</div>
+    <div class="silent">
+      <span>🔇</span>
+      <div><b>ระบบอยู่ในโหมดเงียบ</b><br>ไม่มีเสียง ไม่มีการสั่น และหน้าจอไม่แสดงแจ้งเตือน เพื่อความปลอดภัยของผู้แจ้ง</div>
+    </div>
+    <div class="center">
+      <div class="sos" id="sosBtn" style="position:relative">
+        <div class="sos-ring"></div>
+        <div>⚠</div><div>กดค้าง 1 วิ<br>เพื่อส่ง SOS</div>
+      </div>
+      <p class="sub" style="margin-top:10px">ป้องกันการกดพลาด — ต้องกดค้างจึงจะส่งคำขอ</p>
+    </div>
+    <div class="privacy">
+      <span>🔒</span>
+      <div>ข้อมูลของคุณถูกเก็บเป็นความลับ เปิดเผยเฉพาะเจ้าหน้าที่ที่เกี่ยวข้องกับการช่วยเหลือเท่านั้น</div>
+    </div>
+    <button class="btn btn-bystander" onclick="enterBystanderFlow()">🧍 แจ้งเหตุแทนผู้อื่น<br>(สำหรับผู้พบเห็นเหตุการณ์)</button>
+  </div>
+
+  <!-- 2b. Bystander — confirm location -->
+  <div class="screen" id="s-by-loc">
+    <h3>ยืนยันตำแหน่งก่อนแจ้งเหตุ</h3>
+    <p class="sub" style="margin-bottom:16px">ระบุจุดที่พบเหตุ เพื่อให้เจ้าหน้าที่เข้าถึงได้เร็วที่สุด</p>
+    <div class="label">โซนที่พบเหตุ</div>
+    <div class="chips" id="zoneChips">
+      <div class="chip" data-z="โซนหน้า">โซนหน้า</div>
+      <div class="chip on" data-z="โซนกลาง">โซนกลาง</div>
+      <div class="chip" data-z="โซนหลัง">โซนหลัง</div>
+    </div>
+    <div class="pill">🚌 <b>รถ B-104</b> · โซน B</div>
+    <div class="pill">🕘 เวลาที่เกิดเหตุโดยประมาณ <b style="margin-left:auto" id="tNow"></b></div>
+    <div class="pill">📍 ใช้พิกัด GPS ปัจจุบัน (13.75630, 100.50180)</div>
+    <button class="btn btn-send" onclick="go('s-by-detail')">ถูกต้อง — แจ้งจุดนี้ ▸</button>
+  </div>
+
+  <!-- 2c. Bystander — details + silent mode -->
+  <div class="screen" id="s-by-detail">
+    <h3>เพิ่มรายละเอียด</h3>
+    <p class="sub" style="margin-bottom:16px">(ไม่บังคับ) ข้ามขั้นตอนนี้ก็ส่งได้ทันที</p>
+    <div class="silent">
+      <span>🔇</span>
+      <div><b>ระบบอยู่ในโหมดเงียบ</b><br>ไม่มีเสียง ไม่มีการสั่น และหน้าจอไม่แสดงแจ้งเตือน เพื่อความปลอดภัยของผู้แจ้ง</div>
+    </div>
+    <div class="label">ลักษณะเหตุการณ์</div>
+    <div class="chips" id="tagChips">
+      <div class="chip on" data-t="ผู้ก่อเหตุมีอาวุธ">ผู้ก่อเหตุมีอาวุธ</div>
+      <div class="chip" data-t="มีผู้บาดเจ็บ">มีผู้บาดเจ็บ</div>
+      <div class="chip on" data-t="ลวนลาม / คุกคาม">ลวนลาม / คุกคาม</div>
+      <div class="chip" data-t="ทะเลาะวิวาท">ทะเลาะวิวาท</div>
+    </div>
+    <textarea class="field" id="incidentDetails" maxlength="4000" placeholder="พิมพ์เพิ่มเติม เช่น รูปพรรณผู้ก่อเหตุ…"></textarea>
+    <button class="btn btn-send" onclick="sendSOS()">ส่งแจ้งเหตุ ▸</button>
+  </div>
+
+  <!-- 3. Sending (shared) -->
+  <div class="screen" id="s-sending">
+    <div class="center">
+      <div class="ring"></div>
+      <h2 style="margin-bottom:22px">กำลังส่งสัญญาณขอความช่วยเหลือ</h2>
+      <div style="width:100%">
+        <div class="ch"><span>💬</span><span>LINE OA</span><span>✓</span></div>
+        <div class="ch"><span>📞</span><span>SMS</span><span>✓</span></div>
+        <div class="ch"><span>✉️</span><span>อีเมลศูนย์ควบคุม</span><span>✓</span></div>
+        <div class="ch"><span>🚌</span><span>หน้าจอคนขับ</span><span>✓</span></div>
+      </div>
+      <p class="sub" style="margin-top:18px">🔒 ส่งผ่านช่องทางที่เข้ารหัส</p>
+      <p class="sub" style="margin-top:4px;display:none" id="silentSendNote">🔇 ส่งแบบเงียบ — ไม่มีเสียงและการแจ้งเตือนบนเครื่อง</p>
+    </div>
+  </div>
+
+  <!-- 4. Sent (shared, wording adapts to mode) -->
+  <div class="screen" id="s-sent">
+    <div class="center">
+      <div class="tick">✓</div>
+      <h2>ส่งคำขอแล้ว</h2>
+      <p class="sub" style="margin-top:8px" id="sentSub">เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว<br>โปรดอยู่ในที่ปลอดภัย</p>
+      <div class="code" id="codeDisp">SOS-000000</div>
+      <p class="sub" style="margin-top:16px" id="sentWait">รอเจ้าหน้าที่ดำเนินการ…</p>
+    </div>
+    <div class="privacy" id="sentPrivacy" style="display:none">
+      <span>🔒</span>
+      <div>รหัสเหตุการณ์นี้ใช้อ้างอิงได้ภายหลัง ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น</div>
+    </div>
+  </div>
+
+  <!-- 5. Status tracker — victim only -->
+  <div class="screen" id="s-status">
+    <div style="text-align:center">
+      <div class="badge" id="statusBadge">🕐 รอคนขับรับทราบ</div>
+      <h3>สถานะการแจ้งเหตุ</h3>
+      <p class="sub" id="statusMeta">SOS-000000</p>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="dot">✓</div>
+        <div><b>ระบบรับแจ้งเหตุ</b><small id="t1"></small></div></div>
+      <div class="step" id="step2"><div class="dot now">●</div>
+        <div><b>คนขับรับทราบแล้ว</b><small id="t2">รอการตอบรับจากคนขับ…</small></div></div>
+      <div class="step" id="step3"><div class="dot wait">3</div>
+        <div><b>กำลังระงับเหตุ / จัดหาพื้นที่ปลอดภัย</b><small id="t3">รอดำเนินการ</small></div></div>
+      <div class="step" id="step4"><div class="dot wait">4</div>
+        <div><b>ส่งต่อเจ้าหน้าที่ตำรวจ (ถ้าจำเป็น)</b><small id="t4">รอดำเนินการ</small></div></div>
+    </div>
+
+    <div class="ask" id="askBox">
+      <b>ท่านต้องการให้แจ้งตำรวจหรือไม่?</b>
+      <p>ปุ่มนี้ <b style="display:inline">ไม่ใช่การโทรหาตำรวจ</b> แต่เป็นการส่งความประสงค์ไปยังคนขับ
+      เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน</p>
+    </div>
+    <button class="btn btn-police" id="askPoliceBtn" onclick="requestPolice()">📞 แจ้งความประสงค์ให้เรียกตำรวจ</button>
+    <button class="btn" id="noPoliceBtn" style="margin-top:10px" onclick="document.getElementById('askBox').style.display='none';document.getElementById('askPoliceBtn').style.display='none';document.getElementById('noPoliceBtn').style.display='none'">ยังไม่ต้องการ</button>
+  </div>
+
+  <!-- 6. Closed (shared) -->
+  <div class="screen" id="s-closed">
+    <div class="center">
+      <div class="tick">✓</div>
+      <h2>เคสถูกปิดแล้ว</h2>
+      <p class="sub" style="margin-top:8px">เจ้าหน้าที่ดำเนินการเข้าช่วยเหลือเรียบร้อยแล้ว</p>
+      <div class="code" id="closedCode" style="font-size:15px;color:#6B7280;font-weight:600"></div>
+      <div class="note" style="margin-top:26px">
+        หากต้องการดำเนินการด้านอื่น ๆ เช่น แจ้งความดำเนินคดี
+        สามารถติดต่อไปที่ Facebook ขสมก. พร้อมบวก หรือ LINE OA @bmta
+      </div>
+    </div>
+    <button class="btn" style="margin-top:20px" onclick="location.reload()">เริ่มจำลองใหม่</button>
+  </div>
+
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+const translations = {
+  en: {
+    '🔴 หน้าจอผู้โดยสาร (Victim)':'🔴 Passenger screen (Victim)', '🧍 หน้าจอผู้พบเห็นเหตุการณ์ (Bystander)':'🧍 Bystander screen',
+    '← กลับหน้าควบคุม':'← Control hub', 'รถ B-104 · โซน B · ที่นั่ง 14':'Bus B-104 · Zone B · Seat 14',
+    '📍 พิกัดพร้อมส่ง (13.75630, 100.50180)':'📍 Location ready (13.75630, 100.50180)',
+    'กดค้าง 1 วิ\nเพื่อส่ง SOS':'Hold for 1 second\nto send SOS', 'ป้องกันการกดพลาด — ต้องกดค้างจึงจะส่งคำขอ':'Press and hold to prevent accidental alerts',
+    'ข้อมูลของคุณถูกเก็บเป็นความลับ เปิดเผยเฉพาะเจ้าหน้าที่ที่เกี่ยวข้องกับการช่วยเหลือเท่านั้น':'Your information is confidential and visible only to authorized responders.',
+    '🧍 แจ้งเหตุแทนผู้อื่น\n(สำหรับผู้พบเห็นเหตุการณ์)':'🧍 Report for someone else\n(for bystanders)',
+    'ยืนยันตำแหน่งก่อนแจ้งเหตุ':'Confirm the incident location', 'ระบุจุดที่พบเหตุ เพื่อให้เจ้าหน้าที่เข้าถึงได้เร็วที่สุด':'Specify where it happened so responders can reach you quickly.',
+    'โซนที่พบเหตุ':'Incident area', 'โซนหน้า':'Front area', 'โซนกลาง':'Middle area', 'โซนหลัง':'Rear area',
+    '🚌 รถ B-104 · โซน B':'🚌 Bus B-104 · Zone B', '🕘 เวลาที่เกิดเหตุโดยประมาณ':'🕘 Approximate incident time',
+    '📍 ใช้พิกัด GPS ปัจจุบัน (13.75630, 100.50180)':'📍 Use current GPS location (13.75630, 100.50180)', 'ถูกต้อง — แจ้งจุดนี้ ▸':'Confirm this location ▸',
+    'เพิ่มรายละเอียด':'Add details', '(ไม่บังคับ) ข้ามขั้นตอนนี้ก็ส่งได้ทันที':'Optional — you can skip this step and send now.',
+    'ระบบอยู่ในโหมดเงียบ':'Silent mode is on', 'ไม่มีเสียง ไม่มีการสั่น และหน้าจอไม่แสดงแจ้งเตือน เพื่อความปลอดภัยของผู้แจ้ง':'No sound, vibration, or on-screen alert, for your safety.',
+    'ลักษณะเหตุการณ์':'Incident type', 'ผู้ก่อเหตุมีอาวุธ':'Suspect has a weapon', 'มีผู้บาดเจ็บ':'Someone is injured',
+    'ลวนลาม / คุกคาม':'Harassment / threat', 'ทะเลาะวิวาท':'Fight / altercation', 'ส่งแจ้งเหตุ ▸':'Send alert ▸',
+    'กำลังส่งสัญญาณขอความช่วยเหลือ':'Sending your emergency alert', 'อีเมลศูนย์ควบคุม':'Control center email', 'หน้าจอคนขับ':'Driver display',
+    '🔒 ส่งผ่านช่องทางที่เข้ารหัส':'🔒 Sent through encrypted channels', '🔇 ส่งแบบเงียบ — ไม่มีเสียงและการแจ้งเตือนบนเครื่อง':'🔇 Silent alert — no sound or device notification',
+    'ส่งคำขอแล้ว':'Alert sent', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว\nโปรดอยู่ในที่ปลอดภัย':'Responders have been alerted.\nPlease stay somewhere safe.',
+    'รอเจ้าหน้าที่ดำเนินการ…':'Waiting for responders…', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว\nข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'Responders have been alerted.\nYour identity is not shared with other passengers.',
+    'รหัสเหตุการณ์นี้ใช้อ้างอิงได้ภายหลัง ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'Use this incident ID for future reference. Your identity is not shared with other passengers.',
+    '🕐 รอคนขับรับทราบ':'🕐 Waiting for driver', 'สถานะการแจ้งเหตุ':'Alert status', 'ระบบรับแจ้งเหตุ':'Alert received',
+    'คนขับรับทราบแล้ว':'Driver acknowledged', 'รอการตอบรับจากคนขับ…':'Waiting for driver response…', 'กำลังระงับเหตุ / จัดหาพื้นที่ปลอดภัย':'Responding / securing a safe area',
+    'รอดำเนินการ':'Pending', 'ส่งต่อเจ้าหน้าที่ตำรวจ (ถ้าจำเป็น)':'Contact police (if needed)', 'ท่านต้องการให้แจ้งตำรวจหรือไม่?':'Would you like the police contacted?',
+    'ปุ่มนี้ ไม่ใช่การโทรหาตำรวจ แต่เป็นการส่งความประสงค์ไปยังคนขับ เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน':'This does not call the police directly. It asks the driver to contact the police on your behalf.',
+    '📞 แจ้งความประสงค์ให้เรียกตำรวจ':'📞 Ask driver to contact police', 'ยังไม่ต้องการ':'Not now', 'เคสถูกปิดแล้ว':'Case closed',
+    'เจ้าหน้าที่ดำเนินการเข้าช่วยเหลือเรียบร้อยแล้ว':'Responders have completed the assistance.',
+    'หากต้องการดำเนินการด้านอื่น ๆ เช่น แจ้งความดำเนินคดี สามารถติดต่อไปที่ Facebook ขสมก. พร้อมบวก หรือ LINE OA @bmta':'For further action, such as filing a police report, contact BMTA Prompt Plus on Facebook or LINE OA @bmta.',
+    'เริ่มจำลองใหม่':'Start again', 'พิมพ์เพิ่มเติม เช่น รูปพรรณผู้ก่อเหตุ…':'Add details, e.g. the suspect’s appearance…'
+  },
+  zh: {
+    '🔴 หน้าจอผู้โดยสาร (Victim)':'🔴 乘客页面（受害者）', '🧍 หน้าจอผู้พบเห็นเหตุการณ์ (Bystander)':'🧍 目击者页面', '← กลับหน้าควบคุม':'← 返回控制台',
+    'รถ B-104 · โซน B · ที่นั่ง 14':'B-104号车 · B区 · 14座', '📍 พิกัดพร้อมส่ง (13.75630, 100.50180)':'📍 位置已就绪 (13.75630, 100.50180)',
+    'กดค้าง 1 วิ\nเพื่อส่ง SOS':'长按1秒\n发送 SOS', 'ป้องกันการกดพลาด — ต้องกดค้างจึงจะส่งคำขอ':'请长按以防误触',
+    'ข้อมูลของคุณถูกเก็บเป็นความลับ เปิดเผยเฉพาะเจ้าหน้าที่ที่เกี่ยวข้องกับการช่วยเหลือเท่านั้น':'您的信息将被保密，仅向相关救援人员显示。',
+    '🧍 แจ้งเหตุแทนผู้อื่น\n(สำหรับผู้พบเห็นเหตุการณ์)':'🧍 为他人报告\n（目击者）', 'ยืนยันตำแหน่งก่อนแจ้งเหตุ':'确认事件位置',
+    'ระบุจุดที่พบเหตุ เพื่อให้เจ้าหน้าที่เข้าถึงได้เร็วที่สุด':'请注明事发地点，以便救援人员尽快抵达。', 'โซนที่พบเหตุ':'事发区域', 'โซนหน้า':'前部', 'โซนกลาง':'中部', 'โซนหลัง':'后部',
+    '🚌 รถ B-104 · โซน B':'🚌 B-104号车 · B区', '🕘 เวลาที่เกิดเหตุโดยประมาณ':'🕘 大约发生时间',
+    '📍 ใช้พิกัด GPS ปัจจุบัน (13.75630, 100.50180)':'📍 使用当前 GPS 位置 (13.75630, 100.50180)', 'ถูกต้อง — แจ้งจุดนี้ ▸':'确认此位置 ▸',
+    'เพิ่มรายละเอียด':'添加详情', '(ไม่บังคับ) ข้ามขั้นตอนนี้ก็ส่งได้ทันที':'选填 — 可跳过并立即发送。', 'ระบบอยู่ในโหมดเงียบ':'静音模式已开启',
+    'ไม่มีเสียง ไม่มีการสั่น และหน้าจอไม่แสดงแจ้งเตือน เพื่อความปลอดภัยของผู้แจ้ง':'无声音、振动或屏幕提醒，保障报告者安全。', 'ลักษณะเหตุการณ์':'事件类型',
+    'ผู้ก่อเหตุมีอาวุธ':'嫌疑人持有武器', 'มีผู้บาดเจ็บ':'有人受伤', 'ลวนลาม / คุกคาม':'骚扰 / 威胁', 'ทะเลาะวิวาท':'打架 / 冲突',
+    'ส่งแจ้งเหตุ ▸':'发送报告 ▸', 'กำลังส่งสัญญาณขอความช่วยเหลือ':'正在发送紧急求助', 'อีเมลศูนย์ควบคุม':'控制中心电邮', 'หน้าจอคนขับ':'司机屏幕',
+    '🔒 ส่งผ่านช่องทางที่เข้ารหัส':'🔒 通过加密渠道发送', '🔇 ส่งแบบเงียบ — ไม่มีเสียงและการแจ้งเตือนบนเครื่อง':'🔇 静音发送 — 设备无声音和通知',
+    'ส่งคำขอแล้ว':'求助已发送', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว\nโปรดอยู่ในที่ปลอดภัย':'救援人员已收到通知。\n请留在安全地点。', 'รอเจ้าหน้าที่ดำเนินการ…':'等待救援人员处理…',
+    'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว\nข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'救援人员已收到通知。\n报告者信息不会向其他乘客公开。',
+    'รหัสเหตุการณ์นี้ใช้อ้างอิงได้ภายหลัง ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'此事件编号可供日后查询。报告者信息不会向其他乘客公开。',
+    '🕐 รอคนขับรับทราบ':'🕐 等待司机确认', 'สถานะการแจ้งเหตุ':'求助状态', 'ระบบรับแจ้งเหตุ':'系统已接收求助', 'คนขับรับทราบแล้ว':'司机已确认',
+    'รอการตอบรับจากคนขับ…':'等待司机回应…', 'กำลังระงับเหตุ / จัดหาพื้นที่ปลอดภัย':'正在处理 / 安排安全区域', 'รอดำเนินการ':'待处理',
+    'ส่งต่อเจ้าหน้าที่ตำรวจ (ถ้าจำเป็น)':'转交警方（如需要）', 'ท่านต้องการให้แจ้งตำรวจหรือไม่?':'您需要联系警方吗？',
+    'ปุ่มนี้ ไม่ใช่การโทรหาตำรวจ แต่เป็นการส่งความประสงค์ไปยังคนขับ เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน':'此按钮不会直接致电警方，而是请求司机代您联系警方。',
+    '📞 แจ้งความประสงค์ให้เรียกตำรวจ':'📞 请求司机联系警方', 'ยังไม่ต้องการ':'暂时不需要', 'เคสถูกปิดแล้ว':'事件已结束', 'เจ้าหน้าที่ดำเนินการเข้าช่วยเหลือเรียบร้อยแล้ว':'救援人员已完成协助。',
+    'หากต้องการดำเนินการด้านอื่น ๆ เช่น แจ้งความดำเนินคดี สามารถติดต่อไปที่ Facebook ขสมก. พร้อมบวก หรือ LINE OA @bmta':'如需后续处理（例如报警），请通过 Facebook 联系 BMTA Prompt Plus 或通过 LINE OA 联系 @bmta。',
+    'เริ่มจำลองใหม่':'重新开始', 'พิมพ์เพิ่มเติม เช่น รูปพรรณผู้ก่อเหตุ…':'补充详情，例如嫌疑人的外貌…'
+  },
+  my: {
+    '🔴 หน้าจอผู้โดยสาร (Victim)':'🔴 ခရီးသည် မျက်နှာပြင် (Victim)', '🧍 หน้าจอผู้พบเห็นเหตุการณ์ (Bystander)':'🧍 မျက်မြင်သက်သေ မျက်နှာပြင်',
+    '← กลับหน้าควบคุม':'← ထိန်းချုပ်စာမျက်နှာ', 'รถ B-104 · โซน B · ที่นั่ง 14':'ယာဉ် B-104 · ဇုန် B · ခုံ 14',
+    '📍 พิกัดพร้อมส่ง (13.75630, 100.50180)':'📍 တည်နေရာ ပို့ရန်အသင့် (13.75630, 100.50180)',
+    'กดค้าง 1 วิ\nเพื่อส่ง SOS':'SOS ပို့ရန်\n၁ စက္ကန့် ဖိထားပါ', 'ป้องกันการกดพลาด — ต้องกดค้างจึงจะส่งคำขอ':'မတော်တဆနှိပ်မိခြင်းမှ ကာကွယ်ရန် ဖိထားပါ',
+    'ข้อมูลของคุณถูกเก็บเป็นความลับ เปิดเผยเฉพาะเจ้าหน้าที่ที่เกี่ยวข้องกับการช่วยเหลือเท่านั้น':'သင့်အချက်အလက်များကို လျှို့ဝှက်ထားပြီး ကူညီရေးတာဝန်ရှိသူများသာ ကြည့်ရှုနိုင်ပါသည်။',
+    '🧍 แจ้งเหตุแทนผู้อื่น\n(สำหรับผู้พบเห็นเหตุการณ์)':'🧍 အခြားသူအတွက် တိုင်ကြားရန်\n(မျက်မြင်သက်သေအတွက်)',
+    'ยืนยันตำแหน่งก่อนแจ้งเหตุ':'ဖြစ်ရပ်တည်နေရာကို အတည်ပြုပါ', 'ระบุจุดที่พบเหตุ เพื่อให้เจ้าหน้าที่เข้าถึงได้เร็วที่สุด':'တာဝန်ရှိသူများ အမြန်ဆုံးရောက်ရှိနိုင်ရန် ဖြစ်ပွားရာနေရာကို သတ်မှတ်ပါ။',
+    'โซนที่พบเหตุ':'ဖြစ်ပွားရာဇုန်', 'โซนหน้า':'ရှေ့ဇုန်', 'โซนกลาง':'အလယ်ဇုန်', 'โซนหลัง':'နောက်ဇုန်',
+    '🚌 รถ B-104 · โซน B':'🚌 ယာဉ် B-104 · ဇုန် B', '🕘 เวลาที่เกิดเหตุโดยประมาณ':'🕘 ခန့်မှန်းဖြစ်ပွားချိန်',
+    '📍 ใช้พิกัด GPS ปัจจุบัน (13.75630, 100.50180)':'📍 လက်ရှိ GPS တည်နေရာကို သုံးမည် (13.75630, 100.50180)', 'ถูกต้อง — แจ้งจุดนี้ ▸':'မှန်ကန်သည် — ဤနေရာကို တိုင်ကြားမည် ▸',
+    'เพิ่มรายละเอียด':'အသေးစိတ် ထည့်ရန်', '(ไม่บังคับ) ข้ามขั้นตอนนี้ก็ส่งได้ทันที':'မဖြည့်လည်းရသည် — ဤအဆင့်ကိုကျော်ပြီး ချက်ချင်းပို့နိုင်သည်။',
+    'ระบบอยู่ในโหมดเงียบ':'အသံတိတ်စနစ် ဖွင့်ထားသည်', 'ไม่มีเสียง ไม่มีการสั่น และหน้าจอไม่แสดงแจ้งเตือน เพื่อความปลอดภัยของผู้แจ้ง':'တိုင်ကြားသူ၏ လုံခြုံရေးအတွက် အသံ၊ တုန်ခါမှုနှင့် မျက်နှာပြင်အသိပေးချက် မရှိပါ။',
+    'ลักษณะเหตุการณ์':'ဖြစ်ရပ်အမျိုးအစား', 'ผู้ก่อเหตุมีอาวุธ':'ကျူးလွန်သူတွင် လက်နက်ရှိသည်', 'มีผู้บาดเจ็บ':'ဒဏ်ရာရသူရှိသည်',
+    'ลวนลาม / คุกคาม':'နှောင့်ယှက် / ခြိမ်းခြောက်', 'ทะเลาะวิวาท':'ရန်ဖြစ် / ပဋိပက္ခ', 'ส่งแจ้งเหตุ ▸':'တိုင်ကြားချက် ပို့မည် ▸',
+    'กำลังส่งสัญญาณขอความช่วยเหลือ':'အရေးပေါ် အကူအညီတောင်းခံမှု ပို့နေသည်', 'อีเมลศูนย์ควบคุม':'ထိန်းချုပ်ရေးစင်တာ အီးမေးလ်', 'หน้าจอคนขับ':'ယာဉ်မောင်း မျက်နှာပြင်',
+    '🔒 ส่งผ่านช่องทางที่เข้ารหัส':'🔒 ကုဒ်ဝှက်ထားသော လမ်းကြောင်းမှ ပို့သည်', '🔇 ส่งแบบเงียบ — ไม่มีเสียงและการแจ้งเตือนบนเครื่อง':'🔇 အသံတိတ်ပို့သည် — စက်တွင် အသံနှင့် အသိပေးချက်မရှိပါ',
+    'ส่งคำขอแล้ว':'တောင်းခံမှု ပို့ပြီးပါပြီ', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว\nโปรดอยู่ในที่ปลอดภัย':'တာဝန်ရှိသူများ အသိပေးချက်ရရှိပါပြီ။\nလုံခြုံသောနေရာတွင် နေပါ။',
+    'รอเจ้าหน้าที่ดำเนินการ…':'တာဝန်ရှိသူများ ဆောင်ရွက်မှုကို စောင့်နေသည်…', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว\nข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'တာဝန်ရှိသူများ အသိပေးချက်ရရှိပါပြီ။\nတိုင်ကြားသူ၏ အချက်အလက်ကို အခြားခရီးသည်များအား မဖော်ပြပါ။',
+    'รหัสเหตุการณ์นี้ใช้อ้างอิงได้ภายหลัง ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'ဤဖြစ်ရပ်နံပါတ်ကို နောက်ပိုင်း ရည်ညွှန်းနိုင်သည်။ တိုင်ကြားသူ၏ အချက်အလက်ကို အခြားခရီးသည်များအား မဖော်ပြပါ။',
+    '🕐 รอคนขับรับทราบ':'🕐 ယာဉ်မောင်း အတည်ပြုမှုကို စောင့်နေသည်', 'สถานะการแจ้งเหตุ':'တိုင်ကြားမှု အခြေအနေ', 'ระบบรับแจ้งเหตุ':'စနစ်က တိုင်ကြားချက် လက်ခံပြီး',
+    'คนขับรับทราบแล้ว':'ယာဉ်မောင်း အတည်ပြုပြီး', 'รอการตอบรับจากคนขับ…':'ယာဉ်မောင်း၏ တုံ့ပြန်မှုကို စောင့်နေသည်…', 'กำลังระงับเหตุ / จัดหาพื้นที่ปลอดภัย':'ဖြစ်ရပ်ကို ထိန်းသိမ်း / လုံခြုံရာနေရာ စီစဉ်နေသည်',
+    'รอดำเนินการ':'ဆောင်ရွက်ရန် စောင့်နေသည်', 'ส่งต่อเจ้าหน้าที่ตำรวจ (ถ้าจำเป็น)':'လိုအပ်ပါက ရဲထံ လွှဲပြောင်းမည်', 'ท่านต้องการให้แจ้งตำรวจหรือไม่?':'ရဲကို ဆက်သွယ်စေလိုပါသလား။',
+    'ปุ่มนี้ ไม่ใช่การโทรหาตำรวจ แต่เป็นการส่งความประสงค์ไปยังคนขับ เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน':'ဤခလုတ်သည် ရဲထံ တိုက်ရိုက်ဖုန်းခေါ်ခြင်းမဟုတ်ပါ။ သင့်ကိုယ်စား ရဲကိုဆက်သွယ်ရန် ယာဉ်မောင်းထံ တောင်းဆိုခြင်းဖြစ်သည်။',
+    '📞 แจ้งความประสงค์ให้เรียกตำรวจ':'📞 ရဲကို ဆက်သွယ်ရန် ယာဉ်မောင်းအား တောင်းဆိုမည်', 'ยังไม่ต้องการ':'ယခု မလိုသေးပါ', 'เคสถูกปิดแล้ว':'ဖြစ်ရပ် ပိတ်ပြီးပါပြီ',
+    'เจ้าหน้าที่ดำเนินการเข้าช่วยเหลือเรียบร้อยแล้ว':'တာဝန်ရှိသူများ ကူညီဆောင်ရွက်ပြီးပါပြီ။',
+    'หากต้องการดำเนินการด้านอื่น ๆ เช่น แจ้งความดำเนินคดี สามารถติดต่อไปที่ Facebook ขสมก. พร้อมบวก หรือ LINE OA @bmta':'ရဲတိုင်ကြားခြင်းကဲ့သို့ နောက်ထပ်ဆောင်ရွက်မှုအတွက် Facebook မှ BMTA Prompt Plus သို့မဟုတ် LINE OA @bmta ကို ဆက်သွယ်ပါ။',
+    'เริ่มจำลองใหม่':'သရုပ်ပြမှု ပြန်စမည်', 'พิมพ์เพิ่มเติม เช่น รูปพรรณผู้ก่อเหตุ…':'ဥပမာ ကျူးလွန်သူ၏ ရုပ်သွင် စသည်တို့ကို ဖြည့်ပါ…'
+  }
+};
+let currentLang = localStorage.getItem('saferide-language') || 'th';
+Object.assign(translations.en, {
+  'กดค้าง 1 วิ':'Hold for 1 second', 'เพื่อส่ง SOS':'to send SOS', '🧍 แจ้งเหตุแทนผู้อื่น':'🧍 Report for someone else', 'แจ้งเหตุแทนผู้อื่น':'Report for someone else', '(สำหรับผู้พบเห็นเหตุการณ์)':'(for bystanders)',
+  '· โซน B':'· Zone B',
+  'รถ B-104':'Bus B-104', 'โซน B':'Zone B', 'เวลาที่เกิดเหตุโดยประมาณ':'Approximate incident time', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว':'Responders have been alerted.',
+  'โปรดอยู่ในที่ปลอดภัย':'Please stay somewhere safe.', 'ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'Your identity is not shared with other passengers.',
+  'ปุ่มนี้':'This button', 'ไม่ใช่การโทรหาตำรวจ':'does not call the police', 'แต่เป็นการส่งความประสงค์ไปยังคนขับ เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน':'; it asks the driver to contact them on your behalf.',
+  '🕐 เจ้าหน้าที่กำลังเข้าช่วยเหลือ':'🕐 Responders are on the way', 'คนขับกำลังดำเนินการตาม Protocol 6 ขั้นตอน':'Driver is following the 6-step protocol',
+  'คนขับรับทราบแล้ว กำลังเข้าดำเนินการ…':'Driver acknowledged and is responding…', 'คนขับแจ้งตำรวจเรียบร้อยแล้ว':'Driver has contacted the police',
+  'ตำรวจกำลังประสานเข้าพื้นที่':'Police are coordinating their arrival', 'คนขับแจ้งตำรวจแล้ว กำลังรอหน่วยเข้าพื้นที่…':'Police contacted — waiting for the unit…',
+  'หน่วยตำรวจยืนยันเข้าพื้นที่แล้ว':'Police unit confirmed on scene', '✓ ส่งความประสงค์แล้ว รอคนขับดำเนินการ':'✓ Request sent — waiting for driver'
+});
+Object.assign(translations.zh, {
+  'กดค้าง 1 วิ':'长按1秒', 'เพื่อส่ง SOS':'发送 SOS', '🧍 แจ้งเหตุแทนผู้อื่น':'🧍 为他人报告', 'แจ้งเหตุแทนผู้อื่น':'为他人报告', '(สำหรับผู้พบเห็นเหตุการณ์)':'（目击者）',
+  '· โซน B':'· B区',
+  'รถ B-104':'B-104号车', 'โซน B':'B区', 'เวลาที่เกิดเหตุโดยประมาณ':'大约发生时间', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว':'救援人员已收到通知。',
+  'โปรดอยู่ในที่ปลอดภัย':'请留在安全地点。', 'ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'报告者信息不会向其他乘客公开。',
+  'ปุ่มนี้':'此按钮', 'ไม่ใช่การโทรหาตำรวจ':'不会直接致电警方', 'แต่เป็นการส่งความประสงค์ไปยังคนขับ เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน':'，而是请求司机代您联系警方。',
+  '🕐 เจ้าหน้าที่กำลังเข้าช่วยเหลือ':'🕐 救援人员正在前来', 'คนขับกำลังดำเนินการตาม Protocol 6 ขั้นตอน':'司机正在执行六步应急流程',
+  'คนขับรับทราบแล้ว กำลังเข้าดำเนินการ…':'司机已确认，正在处理…', 'คนขับแจ้งตำรวจเรียบร้อยแล้ว':'司机已联系警方',
+  'ตำรวจกำลังประสานเข้าพื้นที่':'警方正在协调到场', 'คนขับแจ้งตำรวจแล้ว กำลังรอหน่วยเข้าพื้นที่…':'已联系警方 — 正在等待警员到场…',
+  'หน่วยตำรวจยืนยันเข้าพื้นที่แล้ว':'警方已确认到场', '✓ ส่งความประสงค์แล้ว รอคนขับดำเนินการ':'✓ 请求已发送 — 等待司机处理'
+});
+Object.assign(translations.my, {
+  'กดค้าง 1 วิ':'၁ စက္ကန့် ဖိထားပါ', 'เพื่อส่ง SOS':'SOS ပို့ရန်', '🧍 แจ้งเหตุแทนผู้อื่น':'🧍 အခြားသူအတွက် တိုင်ကြားရန်', 'แจ้งเหตุแทนผู้อื่น':'အခြားသူအတွက် တိုင်ကြားရန်', '(สำหรับผู้พบเห็นเหตุการณ์)':'(မျက်မြင်သက်သေအတွက်)',
+  '· โซน B':'· ဇုန် B',
+  'รถ B-104':'ယာဉ် B-104', 'โซน B':'ဇုန် B', 'เวลาที่เกิดเหตุโดยประมาณ':'ခန့်မှန်းဖြစ်ပွားချိန်', 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว':'တာဝန်ရှိသူများ အသိပေးချက်ရရှိပါပြီ။',
+  'โปรดอยู่ในที่ปลอดภัย':'လုံခြုံသောနေရာတွင် နေပါ။', 'ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น':'တိုင်ကြားသူ၏ အချက်အလက်ကို အခြားခရီးသည်များအား မဖော်ပြပါ။',
+  'ปุ่มนี้':'ဤခလုတ်သည်', 'ไม่ใช่การโทรหาตำรวจ':'ရဲထံ တိုက်ရိုက်ဖုန်းခေါ်ခြင်း မဟုတ်ပါ', 'แต่เป็นการส่งความประสงค์ไปยังคนขับ เพื่อให้คนขับประสานเจ้าหน้าที่ตำรวจเข้ามาดูแลแทนท่าน':'၊ သင့်ကိုယ်စား ရဲကိုဆက်သွယ်ရန် ယာဉ်မောင်းထံ တောင်းဆိုခြင်းဖြစ်သည်။',
+  '🕐 เจ้าหน้าที่กำลังเข้าช่วยเหลือ':'🕐 တာဝန်ရှိသူများ လာရောက်ကူညီနေသည်', 'คนขับกำลังดำเนินการตาม Protocol 6 ขั้นตอน':'ယာဉ်မောင်းက အဆင့် ၆ ဆင့် လုပ်ထုံးလုပ်နည်းအတိုင်း ဆောင်ရွက်နေသည်',
+  'คนขับรับทราบแล้ว กำลังเข้าดำเนินการ…':'ယာဉ်မောင်း အတည်ပြုပြီး ဆောင်ရွက်နေသည်…', 'คนขับแจ้งตำรวจเรียบร้อยแล้ว':'ယာဉ်မောင်းက ရဲကို ဆက်သွယ်ပြီးပါပြီ',
+  'ตำรวจกำลังประสานเข้าพื้นที่':'ရဲများ ရောက်ရှိရန် ညှိနှိုင်းနေသည်', 'คนขับแจ้งตำรวจแล้ว กำลังรอหน่วยเข้าพื้นที่…':'ရဲကို ဆက်သွယ်ပြီး — ရဲတပ်ဖွဲ့ ရောက်လာရန် စောင့်နေသည်…',
+  'หน่วยตำรวจยืนยันเข้าพื้นที่แล้ว':'ရဲတပ်ဖွဲ့ ရောက်ရှိကြောင်း အတည်ပြုပြီး', '✓ ส่งความประสงค์แล้ว รอคนขับดำเนินการ':'✓ တောင်းဆိုချက် ပို့ပြီး — ယာဉ်မောင်း ဆောင်ရွက်မှုကို စောင့်နေသည်'
+});
+translations.en['คนขับรับทราบแล้วเมื่อ']='Driver acknowledged at'; translations.en['เคส']='Case';
+translations.zh['คนขับรับทราบแล้วเมื่อ']='司机确认时间：'; translations.zh['เคส']='事件';
+translations.my['คนขับรับทราบแล้วเมื่อ']='ယာဉ်မောင်း အတည်ပြုချိန်'; translations.my['เคส']='ဖြစ်ရပ်';
+const thaiText = new WeakMap();
+function translatedValue(value){
+  const normalized = String(value).trim().replace(/\s+/g, ' ');
+  let original = normalized;
+  for(const language of ['en','zh','my']){
+    const match = Object.entries(translations[language]).find(([,translated])=>String(translated).trim().replace(/\s+/g, ' ') === normalized);
+    if(match){ original = match[0]; break; }
+  }
+  return currentLang === 'th' ? original : (translations[currentLang][original] || original);
+}
+function renderLanguage(){
+  document.documentElement.lang = currentLang === 'zh' ? 'zh-Hans' : currentLang;
+  document.body.classList.toggle('lang-my', currentLang === 'my');
+  document.title = ({th:'ผู้โดยสาร — SafeBus Simulation', en:'Passenger — SafeBus Simulation', zh:'乘客 — SafeBus Simulation', my:'ခရီးသည် — SafeBus Simulation'})[currentLang];
+  document.querySelectorAll('.language-switcher button').forEach(b=>b.classList.toggle('active', b.dataset.lang === currentLang));
+  document.querySelectorAll('[data-i18n-key]').forEach(element=>{
+    element.textContent = translatedValue(element.dataset.i18nKey) + (element.dataset.i18nSuffix || '');
+  });
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node;
+  while((node = walker.nextNode())){
+    if(node.parentElement?.closest('script,style,.language-switcher,[data-i18n-key]')) continue;
+    if(!thaiText.has(node)) thaiText.set(node, node.nodeValue);
+    const original = thaiText.get(node), trimmed = original.trim();
+    if(!trimmed) continue;
+    const translated = translatedValue(trimmed.replace(/\s+/g, ' '));
+    node.nodeValue = original.replace(trimmed, translated);
+  }
+  const field = document.querySelector('.field');
+  field.placeholder = translatedValue('พิมพ์เพิ่มเติม เช่น รูปพรรณผู้ก่อเหตุ…');
+}
+function setLiveText(id, key, suffix=''){
+  const element = document.getElementById(id);
+  element.dataset.i18nKey = key;
+  element.dataset.i18nSuffix = suffix;
+  element.textContent = translatedValue(key) + suffix;
+}
+document.querySelectorAll('.language-switcher button').forEach(button=>button.addEventListener('click', ()=>{
+  currentLang = button.dataset.lang; localStorage.setItem('saferide-language', currentLang); renderLanguage(); updateCurrentTime();
+}));
+
+let caseId = null;
+let mode = 'victim';           // 'victim' | 'bystander'
+let zone = 'โซนกลาง';
+let tags = ['ผู้ก่อเหตุมีอาวุธ','ลวนลาม / คุกคาม'];
+
+function updateCurrentTime(){
+  const locale = ({th:'th-TH', en:'en-GB', zh:'zh-CN', my:'my-MM'})[currentLang];
+  document.getElementById('tNow').textContent = new Date().toLocaleTimeString(locale,{hour:'2-digit',minute:'2-digit'}) + (currentLang === 'th' ? ' น.' : '');
+}
+updateCurrentTime();
+renderLanguage();
+
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+/* ---- switch this same tab into the bystander (report-for-someone-else) flow ---- */
+function enterBystanderFlow(){
+  mode = 'bystander';
+  document.getElementById('roleTag').textContent = '🧍 หน้าจอผู้พบเห็นเหตุการณ์ (Bystander)';
+  document.getElementById('roleTag').className = 'tag bystander';
+  go('s-by-loc');
+  thaiText.delete(document.getElementById('roleTag').firstChild);
+  renderLanguage();
+}
+
+document.querySelectorAll('#zoneChips .chip').forEach(c=>c.addEventListener('click',()=>{
+  document.querySelectorAll('#zoneChips .chip').forEach(x=>x.classList.remove('on'));
+  c.classList.add('on'); zone = c.dataset.z;
+}));
+document.querySelectorAll('#tagChips .chip').forEach(c=>c.addEventListener('click',()=>{
+  c.classList.toggle('on');
+  tags = [...document.querySelectorAll('#tagChips .chip.on')].map(x=>x.dataset.t);
+}));
+
+/* ---- press-and-hold 1s SOS button (victim path only) ---- */
+const sosBtn = document.getElementById('sosBtn');
+let pressTimer = null;
+function startPress(){
+  sosBtn.classList.add('pressing');
+  pressTimer = setTimeout(sendSOS, 1000);
+}
+function cancelPress(){
+  sosBtn.classList.remove('pressing');
+  clearTimeout(pressTimer);
+}
+sosBtn.addEventListener('mousedown', startPress);
+sosBtn.addEventListener('touchstart', (e)=>{e.preventDefault();startPress();});
+['mouseup','mouseleave','touchend','touchcancel'].forEach(ev=>sosBtn.addEventListener(ev, cancelPress));
+
+/* ---- shared send: builds the right payload for whichever mode is active ---- */
+function sendSOS(){
+  cancelPress();
+  caseId = genCaseId();
+  startPresence();
+
+  if(mode === 'victim'){
+    sendMsg({type:'sos', from:'passenger', caseId, zone:'B', seat:14, bus:'B-104', time: nowThai()});
+    document.getElementById('silentSendNote').style.display = 'none';
+    document.getElementById('sentSub').innerHTML = 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว<br>โปรดอยู่ในที่ปลอดภัย';
+    document.getElementById('sentPrivacy').style.display = 'none';
+  } else {
+    const details = document.getElementById('incidentDetails').value.trim();
+    sendMsg({type:'sos', from:'bystander', caseId, zone, bus:'B-104', tags, details, time: nowThai()});
+    document.getElementById('silentSendNote').style.display = 'block';
+    document.getElementById('sentSub').innerHTML = 'เจ้าหน้าที่ได้รับแจ้งเตือนแล้ว<br>ข้อมูลผู้แจ้งไม่ถูกเผยแพร่ต่อผู้โดยสารคนอื่น';
+    document.getElementById('sentPrivacy').style.display = 'flex';
+  }
+
+  renderLanguage();
+
+  go('s-sending');
+  setTimeout(()=>{
+    document.getElementById('codeDisp').textContent = caseId;
+    go('s-sent');
+
+    if(mode === 'victim'){
+      // victim keeps going into the live status tracker
+      setTimeout(()=>{
+        document.getElementById('statusMeta').textContent = caseId;
+        document.getElementById('t1').textContent = nowLocalized();
+        go('s-status');
+      }, 1600);
+    }
+    // bystander stays on "ส่งคำขอแล้ว" and waits for case_closed
+  }, 1800);
+}
+
+function requestPolice(){
+  if(!caseId) return;
+  sendMsg({type:'police_request', from:'passenger', caseId});
+  const btn = document.getElementById('askPoliceBtn');
+  btn.disabled = true;
+  setLiveText('askPoliceBtn', '✓ ส่งความประสงค์แล้ว รอคนขับดำเนินการ');
+  document.getElementById('noPoliceBtn').style.display = 'none';
+}
+
+onMsg((msg)=>{
+  if(!caseId || msg.caseId !== caseId) return;
+
+  if(msg.type === 'driver_ack'){
+    setLiveText('statusBadge', '🕐 เจ้าหน้าที่กำลังเข้าช่วยเหลือ');
+    const d2 = document.getElementById('step2').querySelector('.dot');
+    d2.className = 'dot'; d2.textContent = '✓';
+    setLiveText('t2', 'คนขับรับทราบแล้วเมื่อ', ' ' + nowLocalized());
+    document.getElementById('step3').querySelector('.dot').className = 'dot now';
+    setLiveText('t3', 'คนขับกำลังดำเนินการตาม Protocol 6 ขั้นตอน');
+    setLiveText('sentWait', 'คนขับรับทราบแล้ว กำลังเข้าดำเนินการ…');
+  }
+
+  if(msg.type === 'driver_calling_done'){
+    const d3 = document.getElementById('step3').querySelector('.dot');
+    d3.className = 'dot'; d3.textContent = '✓';
+    setLiveText('t3', 'คนขับแจ้งตำรวจเรียบร้อยแล้ว');
+
+    const d4 = document.getElementById('step4').querySelector('.dot');
+    d4.className = 'dot'; d4.textContent = '✓';
+    setLiveText('t4', 'ตำรวจกำลังประสานเข้าพื้นที่');
+
+    setLiveText('sentWait', 'คนขับแจ้งตำรวจแล้ว กำลังรอหน่วยเข้าพื้นที่…');
+  }
+
+  if(msg.type === 'unit_arriving'){
+    const d4 = document.getElementById('step4').querySelector('.dot');
+    d4.className = 'dot'; d4.textContent = '✓';
+    setLiveText('t4', 'หน่วยตำรวจยืนยันเข้าพื้นที่แล้ว');
+  }
+
+  if(msg.type === 'case_closed'){
+    stopPresence();
+    setLiveText('closedCode', 'เคส', ' ' + caseId);
+    go('s-closed');
+    caseId = null;
+  }
+});
+
+let presenceTimer = null;
+function nowLocalized(){
+  return new Date().toLocaleTimeString(({th:'th-TH',en:'en-GB',zh:'zh-CN',my:'my-MM'})[currentLang], {hour:'2-digit', minute:'2-digit'});
+}
+function startPresence(){
+  stopPresence();
+  const ping = ()=> caseId && sendMsg({type:'reporter_presence', from:mode === 'victim' ? 'passenger' : 'bystander', caseId});
+  ping();
+  presenceTimer = setInterval(ping, 2000);
+}
+function stopPresence(){ clearInterval(presenceTimer); presenceTimer = null; }
+function announceClosed(){
+  if(!caseId) return;
+  sendMsg({type:'reporter_closed', from:mode === 'victim' ? 'passenger' : 'bystander', caseId});
+  stopPresence();
+}
+window.addEventListener('pagehide', announceClosed);
+
+/* optional: open with ?start=bystander to jump straight into the bystander flow */
+if(new URLSearchParams(location.search).get('start') === 'bystander'){
+  enterBystanderFlow();
+}
+if('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+</script>
+</body>
+</html>

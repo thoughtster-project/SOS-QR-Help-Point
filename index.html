@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SafeBus SOS — Real-time Simulation Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<style>
+  .wrap{width:100%;max-width:720px}
+  .hero{background:#fff;border-radius:20px;padding:28px 26px;box-shadow:0 2px 16px rgba(17,24,39,.06);margin-bottom:18px}
+  .hero h1{font-size:22px;margin-bottom:8px}
+  .hub-logo{width:30px;height:30px;object-fit:contain;vertical-align:middle}
+  .hero p{font-size:14px;color:#4B5563;line-height:1.8}
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:20px 0}
+  .card{border:1.5px solid var(--line);border-radius:16px;padding:18px 14px;text-align:center;
+        text-decoration:none;color:inherit;background:#fff;transition:.15s}
+  .card:hover{border-color:#C7CBD3;transform:translateY(-2px)}
+  .card .ic{font-size:30px;margin-bottom:8px}
+  .card b{font-size:14px;display:block;margin-bottom:4px}
+  .card span{font-size:12px;color:var(--muted)}
+  .steps-box{background:#fff;border-radius:16px;padding:20px 22px;box-shadow:0 2px 10px rgba(0,0,0,.04)}
+  .steps-box h3{font-size:15px;margin-bottom:10px}
+  .steps-box ol{padding-left:20px;font-size:13.5px;line-height:2;color:#374151}
+  code{background:#F3F4F6;padding:2px 7px;border-radius:6px;font-size:12.5px}
+  .warn{background:#FEF6E7;border:1px solid #F6E3B8;border-radius:12px;padding:12px 14px;
+        font-size:12.5px;color:#8A5B00;margin-top:14px;line-height:1.7}
+  @media(max-width:700px){.cards{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <h1><img class="hub-logo" src="safebus-logo.png" alt="SafeBus"> SafeBus SOS — จำลองสถานการณ์แบบ Real-time</h1>
+    <p>เปิด 3 แท็บหรือหน้าต่างพร้อมกัน ได้แก่ ผู้โดยสาร ผู้พบเห็นเหตุการณ์ และคนขับ จากนั้นลองกด SOS จากฝั่งผู้แจ้งเหตุ
+    เพื่อดูสถานะของทุกฝั่งอัปเดตพร้อมกันทันทีแบบ real-time</p>
+  </div>
+
+  <div class="cards">
+    <a class="card" href="passenger.html" target="_blank">
+      <div class="ic">🔴</div><b>ผู้โดยสาร</b><span>กด SOS ด้วยตนเอง</span>
+    </a>
+    <a class="card" href="passenger.html?start=bystander" target="_blank">
+      <div class="ic">🧍</div><b>ผู้พบเห็นเหตุการณ์</b><span>แจ้งเหตุแทนผู้อื่น (หน้าเดียวกัน)</span>
+    </a>
+    <a class="card" href="driver.html" target="_blank">
+      <div class="ic">🚌</div><b>คนขับ</b><span>รับแจ้งและดำเนินการ</span>
+    </a>
+    <a class="card" href="admin.html" target="_blank">
+      <div class="ic">▦</div><b>Admin</b><span>ดู Log และ Summary</span>
+    </a>
+  </div>
+
+  <div class="hero" style="margin-top:18px">
+    <h3 style="font-size:15px;margin-bottom:10px">📡 บันทึกข้อความที่วิ่งผ่าน channel (real-time)</h3>
+    <div id="wire-log"></div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="common.js"></script>
+<script>
+onMsg(()=>{}); // just to trigger the shared logger on incoming messages
+</script>
+</body>
+</html>

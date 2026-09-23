@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Admin Operations — SafeBus SOS</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="common.css">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body class="admin-app">
+<header class="admin-head">
+  <a class="brand" href="index.html" aria-label="กลับหน้า Simulation Hub">
+    <img class="brand-mark" src="safebus-logo.png" alt="SafeBus"><span><b>SafeBus SOS</b><small>OPERATIONS CONSOLE</small></span>
+  </a>
+  <div class="live"><span></span> LIVE <b id="lastRefresh">กำลังเชื่อมต่อ…</b></div>
+  <a class="hub-link" href="index.html">← Simulation Hub</a>
+</header>
+
+<main class="admin-shell">
+  <section class="intro">
+    <div><p class="eyebrow">INCIDENT OPERATIONS</p><h1>บันทึกเหตุการณ์</h1><p>ตรวจสอบทุกเคส การตอบสนอง และลำดับเหตุการณ์จากผู้แจ้งถึงคนขับ</p></div>
+    <button id="refreshBtn" class="refresh" type="button">รีเฟรชข้อมูล</button>
+  </section>
+
+  <section class="filters" aria-label="ตัวกรองข้อมูล">
+    <label class="search"><span>⌕</span><input id="query" type="search" placeholder="ค้นหาเลขเคส เช่น SOS-123456"></label>
+    <label><span>ประเภทผู้แจ้ง</span><select id="reporter"><option value="all">ทั้งหมด</option><option value="passenger">ผู้โดยสาร</option><option value="bystander">ผู้แจ้งแทน</option></select></label>
+    <label><span>สถานะ</span><select id="status"><option value="all">ทั้งหมด</option><option value="open">กำลังดำเนินการ</option><option value="acknowledged">รับทราบแล้ว</option><option value="closed">ปิดเคส</option><option value="abandoned">ผู้แจ้งออกจากหน้า</option></select></label>
+    <label><span>การตอบสนอง</span><select id="response"><option value="all">ทั้งหมด</option><option value="police">แจ้งตำรวจ</option><option value="requested">ขอให้แจ้งตำรวจ</option><option value="self">คนขับระงับเหตุเอง</option></select></label>
+    <label><span>ตั้งแต่วันที่</span><input id="from" type="date"></label>
+    <label><span>ถึงวันที่</span><input id="to" type="date"></label>
+    <button id="clearBtn" class="clear" type="button">ล้างตัวกรอง</button>
+  </section>
+
+  <div id="errorBox" class="error-box" hidden><b>โหลดข้อมูลไม่สำเร็จ</b><span>กรุณาตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</span></div>
+  <section class="log-panel">
+    <div class="panel-title"><div><h2>Case Log</h2><span id="resultCount">กำลังโหลดข้อมูล…</span></div><div class="legend"><i class="open-dot"></i> กำลังดำเนินการ <i class="closed-dot"></i> ปิดแล้ว</div></div>
+    <div id="loadingRows" class="loading-rows"><i></i><i></i><i></i></div>
+    <div class="table-wrap">
+      <table id="caseTable" hidden>
+        <thead><tr><th>เวลาแจ้ง</th><th>เลขเคส</th><th>ผู้แจ้ง</th><th>ตำแหน่ง</th><th>การตอบสนอง</th><th>สถานะ</th><th></th></tr></thead>
+        <tbody id="caseRows"></tbody>
+      </table>
+    </div>
+    <div id="emptyState" class="empty" hidden><span>ไม่มีข้อมูล</span><p>ยังไม่พบเคสที่ตรงกับตัวกรองนี้</p></div>
+  </section>
+
+  <section id="detailPanel" class="detail-panel" hidden>
+    <div class="detail-head"><div><p class="eyebrow">CASE TIMELINE</p><h2 id="detailCase"></h2></div><button id="closeDetail" aria-label="ปิดรายละเอียด">×</button></div>
+    <div class="case-facts" id="caseFacts"></div>
+    <div class="detail-grid">
+      <div><h3>ข้อความจากผู้แจ้งแทน</h3><div id="detailMessage" class="message-box"></div></div>
+      <div><h3>ลำดับเหตุการณ์</h3><div id="timeline" class="timeline"></div></div>
+    </div>
+  </section>
+
+  <section class="summary">
+    <div class="summary-title"><p class="eyebrow">SUMMARY DASHBOARD</p><h2>ภาพรวมการช่วยเหลือ</h2><p>ตัวเลขสรุปเปลี่ยนตามตัวกรองด้านบน</p></div>
+    <div class="metric-grid">
+      <article class="metric feature"><span>เคสวันนี้</span><strong id="mToday">—</strong><small>เหตุที่แจ้งเข้ามาตั้งแต่ 00:00 น.</small></article>
+      <article class="metric"><span>เคสทั้งหมด</span><strong id="mTotal">—</strong><small>ตามช่วงข้อมูลที่เลือก</small></article>
+      <article class="metric"><span>กำลังดำเนินการ</span><strong id="mOpen">—</strong><small>ยังไม่ปิดเคส</small></article>
+      <article class="metric"><span>เวลาเฉลี่ยก่อนรับทราบ</span><strong id="mAck">—</strong><small>วินาที</small></article>
+      <article class="metric"><span>ผู้โดยสารแจ้งเอง</span><strong id="mPassengers">—</strong><small>เคส</small></article>
+      <article class="metric"><span>ผู้พบเห็นแจ้งแทน</span><strong id="mBystanders">—</strong><small>เคส</small></article>
+      <article class="metric"><span>แจ้งตำรวจ</span><strong id="mPolice">—</strong><small id="mPoliceRequest">ตามคำร้องขอ — เคส</small></article>
+      <article class="metric"><span>คนขับระงับเหตุเอง</span><strong id="mSelf">—</strong><small>เคส</small></article>
+      <article class="metric"><span>ผู้แจ้งออกจากหน้า</span><strong id="mAbandoned">—</strong><small>เคสที่ระบบรีเซ็ตอัตโนมัติ</small></article>
+    </div>
+    <div class="mix-card"><div><span>สัดส่วนประเภทผู้แจ้ง</span><small id="mixLabel">กำลังคำนวณ…</small></div><div class="mix-bar"><i id="passengerMix"></i><b id="bystanderMix"></b></div></div>
+  </section>
+</main>
+<script src="admin.js"></script>
+</body>
+</html>

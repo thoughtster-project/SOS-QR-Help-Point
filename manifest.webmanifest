@@ -1,0 +1,14 @@
+{
+  "name": "SafeBus SOS Passenger",
+  "short_name": "SafeBus SOS",
+  "description": "Passenger emergency assistance screen",
+  "start_url": "passenger.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "lang": "th",
+  "icons": [
+    { "src": "saferide-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

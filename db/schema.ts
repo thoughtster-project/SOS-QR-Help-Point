@@ -27,6 +27,7 @@ export const incidentEvents = pgTable("incident_events", {
   actor: text("actor").notNull(),
   payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
   occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
+  sourceEventId: text("source_event_id").unique(),
 });
 
 export const qrPoints = pgTable("qr_points", {

@@ -11,11 +11,11 @@ The default `passenger.html` and `driver.html` links still use bus `B-104` for t
 
 ## Configuration
 
-- Set `QR_ADMIN_KEY` as a Netlify environment variable before using the create, edit, or deactivate controls. The value is checked by the server and is never included in QR links.
-- Apply the database migrations under `netlify/database/migrations` when deploying.
-- Set `FIREBASE_URL` in `config.js` for faster cross-device notifications. The Netlify database stores active cases and allows the driver screen to recover them after a refresh.
+- Set `QR_ADMIN_KEY` and `DATABASE_URL` in the Vercel project before using the QR controls or incident API. The administrator key is checked by the server and is never included in QR links.
+- Production runs on Vercel with Neon Postgres. The three demo QR points and available Firebase incident history were imported with `scripts/migrate-firebase.mjs`. Imported open cases remain open in the driver queue.
+- The Firebase URL in `config.js` provides faster cross-device notifications. Neon stores active cases and allows the driver screen to recover them after a refresh.
 
-Run `npm ci` and `npm test` to verify the code. Use Netlify's local development environment to exercise the database endpoints locally; a plain static file server does not provide `/api/*`.
+Run `npm ci`, `npm test`, and `npm run build` to verify the code. Vercel supplies the `/api/*` endpoints; a plain static file server does not.
 
 ## Scope
 

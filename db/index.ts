@@ -1,5 +1,7 @@
-import { drizzle } from "drizzle-orm/netlify-db";
+import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./schema.js";
 
-export const db = drizzle({ schema });
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) throw new Error("DATABASE_URL is required");
 
+export const db = drizzle(databaseUrl, { schema });

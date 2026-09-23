@@ -1,6 +1,32 @@
 const $ = id => document.getElementById(id);
 let points = [];
 let editingId = null;
+const logoPromise = new Promise((resolve, reject) => {
+  const logo = new Image();
+  logo.onload = () => resolve(logo);
+  logo.onerror = () => reject(new Error('โหลดโลโก้ไม่สำเร็จ'));
+  logo.src = '/safebus-logo-transparent.png';
+});
+
+async function drawBrandedQr(host, url){
+  const qrHost = document.createElement('div');
+  new QRCode(qrHost,{text:url,width:1024,height:1024,correctLevel:QRCode.CorrectLevel.H});
+  const qr = qrHost.querySelector('canvas');
+  if(!qr) throw new Error('สร้าง QR ไม่สำเร็จ');
+  const logo = await logoPromise;
+  const output = document.createElement('canvas');
+  output.width = output.height = 1200;
+  const ctx = output.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0,0,1200,1200);
+  ctx.drawImage(qr,88,88,1024,1024);
+  // A quiet white center keeps the transparent mark legible and lets QR error correction recover covered modules.
+  const center = 600, backing = 310;
+  ctx.fillRect(center-backing/2,center-backing/2,backing,backing);
+  ctx.drawImage(logo,center-145,center-145,290,290);
+  host.replaceChildren(output);
+  return output;
+}
 $('adminKey').value = sessionStorage.getItem('qr-admin-key') || '';
 $('adminKey').addEventListener('change',()=>sessionStorage.setItem('qr-admin-key',$('adminKey').value));
 
@@ -48,17 +74,22 @@ function render(){
     head.append(state,name,info);
     const qrBox = document.createElement('div'); qrBox.className = 'qr-box';
     const qrHost = document.createElement('div'); qrBox.append(qrHost);
-    new QRCode(qrHost,{text:pointUrl(point),width:512,height:512,correctLevel:QRCode.CorrectLevel.M});
+    let qrCanvas = null;
+    drawBrandedQr(qrHost,pointUrl(point)).then(canvas=>{
+      qrCanvas = canvas;
+      download.disabled = false;
+    }).catch(()=>{
+      qrHost.textContent = 'สร้าง QR ไม่สำเร็จ กรุณาโหลดหน้าใหม่';
+    });
     const endpoint = document.createElement('div'); endpoint.className = 'endpoint';
     const cap = document.createElement('span'); cap.textContent = 'ENDPOINT';
     endpoint.append(cap,document.createTextNode(pointUrl(point)));
     const actions = document.createElement('div'); actions.className = 'actions';
     const download = document.createElement('button'); download.textContent = '↓ ดาวน์โหลด QR';
+    download.disabled = true;
     download.addEventListener('click',()=>{
-      const image = qrHost.querySelector('img'); const canvas = qrHost.querySelector('canvas');
-      const href = canvas?.toDataURL('image/png') || image?.src;
-      if(!href) return;
-      const a=document.createElement('a'); a.href=href; a.download=`SOS-QR-${point.name.replace(/[^\p{L}\p{N}-]+/gu,'-')}.png`; a.click();
+      if(!qrCanvas) return;
+      const a=document.createElement('a'); a.href=qrCanvas.toDataURL('image/png'); a.download=`SOS-QR-${point.name.replace(/[^\p{L}\p{N}-]+/gu,'-')}.png`; a.click();
     });
     const edit = document.createElement('button'); edit.textContent = '✎ แก้ไข'; edit.addEventListener('click',()=>startEdit(point));
     const monitor = document.createElement('button'); monitor.textContent = '🚌 จอคนขับ';

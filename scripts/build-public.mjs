@@ -9,7 +9,7 @@ const files = [
   'index.html', 'passenger.html', 'driver.html', 'admin.html', 'qr-points.html', 'bystander.html',
   'common.css', 'common.js', 'config.js', 'driver.js', 'admin.css', 'admin.js',
   'qr-points.css', 'qr-points.js', 'sw.js', 'manifest.webmanifest',
-  'saferide-icon.svg', 'safebus-logo.png', 'vendor/qrcode.min.js', 'vendor/qrcode.LICENSE',
+  'saferide-icon.svg', 'safebus-logo.png', 'safebus-logo-transparent.png', 'vendor/qrcode.min.js', 'vendor/qrcode.LICENSE',
 ];
 
 await rm(output, { recursive: true, force: true });
